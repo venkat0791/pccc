@@ -457,6 +457,158 @@ pub(crate) fn encode(
     }
 }
 
+/// Generates extrinsic information and posterior LLR values from RSC decoder.
+///
+/// Decoding is by the BCJR algorithm.
+///
+/// # Parameters
+///
+/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
+///
+/// - `info_bits_llr_prior`: Prior LLR values for the information bits.
+///
+/// - `state_machine`: State machine for the RSC decoder.
+///
+/// - `workspace`: Workspace for RSC decoder, to which extrinsic information and posterior LLR
+///   values for the information bits must be written (any pre-existing elements will be cleared
+///   first).
+///
+/// # Errors
+///
+/// Returns an error if `code_bits_llr.len()` does not equal
+/// `(info_bits_llr_prior.len() + state_machine.memory_len) * state_machine.num_output_bits`.
+pub(crate) fn decode(
+    code_bits_llr: &[f64],
+    info_bits_llr_prior: &[f64],
+    state_machine: &mut StateMachine,
+    workspace: &mut DecoderWorkspace,
+) -> Result<(), Error> {
+    let expected_code_bits_llr_len =
+        (info_bits_llr_prior.len() + state_machine.memory_len) * state_machine.num_output_bits;
+    if code_bits_llr.len() != expected_code_bits_llr_len {
+        return Err(Error::InvalidInput(format!(
+            "Wrong number of code bit LLR values (expected {expected_code_bits_llr_len})",
+        )));
+    }
+    run_bcjr_backward_pass(code_bits_llr, info_bits_llr_prior, state_machine, workspace);
+    run_bcjr_forward_pass(code_bits_llr, info_bits_llr_prior, state_machine, workspace);
+    Ok(())
+}
+
+/// Runs backward pass through the trellis in the BCJR decoding algorithm.
+fn run_bcjr_backward_pass(
+    code_bits_llr: &[f64],
+    info_bits_llr_prior: &[f64],
+    state_machine: &mut StateMachine,
+    workspace: &mut DecoderWorkspace,
+) {
+    let index_of_first_tail_code_bit = info_bits_llr_prior.len() * state_machine.num_output_bits;
+    // Backward iterations to compute beta values after last information bit
+    workspace.beta_calc.init_beta_values_after_last_info_bit();
+    for rchunk in
+        code_bits_llr[index_of_first_tail_code_bit ..].rchunks_exact(state_machine.num_output_bits)
+    {
+        compute_previous_beta_values(rchunk, 0.0, state_machine, workspace);
+        workspace.beta_calc.update_beta_values_after_last_info_bit();
+    }
+    // Backward iterations to compute beta values after all other information bits
+    for (&llr_prior, rchunk) in info_bits_llr_prior[1 ..].iter().rev().zip(
+        code_bits_llr[.. index_of_first_tail_code_bit].rchunks_exact(state_machine.num_output_bits),
+    ) {
+        compute_previous_beta_values(rchunk, llr_prior, state_machine, workspace);
+        workspace.beta_calc.save_beta_values_after_info_bit();
+    }
+}
+
+/// Runs forward pass through the trellis in the BCJR decoding algorithm.
+fn run_bcjr_forward_pass(
+    code_bits_llr: &[f64],
+    info_bits_llr_prior: &[f64],
+    state_machine: &mut StateMachine,
+    workspace: &mut DecoderWorkspace,
+) {
+    let code_bits_llr_chunks = code_bits_llr.chunks_exact(state_machine.num_output_bits);
+    // Forward iterations to compute alpha values before each information bit, and thereby to
+    // obtain and save extrinsic information and posterior LLR for each information bit
+    workspace.alpha_calc.init_alpha_values_before_info_bit();
+    workspace.extrinsic_info.clear();
+    workspace.llr_posterior.clear();
+    for (&llr_prior, chunk) in info_bits_llr_prior.iter().zip(code_bits_llr_chunks) {
+        compute_next_alpha_values(chunk, llr_prior, state_machine, workspace);
+        let extrinsic_info = workspace.metric_for_zero - workspace.metric_for_one;
+        let llr_posterior = chunk[0] + llr_prior + extrinsic_info;
+        workspace.extrinsic_info.push(extrinsic_info);
+        workspace.llr_posterior.push(llr_posterior);
+        workspace.beta_calc.delete_beta_values_after_info_bit();
+        workspace.alpha_calc.update_alpha_values_before_info_bit();
+    }
+}
+
+/// Computes beta values for all states at previous time instant.
+fn compute_previous_beta_values(
+    code_bits_llr: &[f64],
+    input_bit_llr_prior: f64,
+    state_machine: &mut StateMachine,
+    workspace: &mut DecoderWorkspace,
+) {
+    // Backward iteration
+    workspace.beta_calc.init_previous_beta_values();
+    for state_index in 0 .. state_machine.num_states {
+        let state = State(state_index);
+        for bit_index in 0 .. 2 {
+            let input_bit = bit_from_index(bit_index);
+            state_machine.compute_branch_metric(
+                state,
+                input_bit,
+                input_bit_llr_prior,
+                code_bits_llr,
+            );
+            workspace.beta_calc.update_previous_beta_value(
+                state,
+                &state_machine.branch_metric,
+                state_machine.state,
+            );
+        }
+    }
+    workspace.beta_calc.recenter_previous_beta_values();
+}
+
+/// Computes alpha values for all states at next time instant.
+fn compute_next_alpha_values(
+    code_bits_llr: &[f64],
+    input_bit_llr_prior: f64,
+    state_machine: &mut StateMachine,
+    workspace: &mut DecoderWorkspace,
+) {
+    // Forward iteration
+    workspace.alpha_calc.init_next_alpha_values();
+    workspace.init_metrics_for_zero_and_one();
+    for state_index in 0 .. state_machine.num_states {
+        let state = State(state_index);
+        for bit_index in 0 .. 2 {
+            let input_bit = bit_from_index(bit_index);
+            state_machine.compute_branch_metric(
+                state,
+                input_bit,
+                input_bit_llr_prior,
+                code_bits_llr,
+            );
+            workspace.update_metric_for_zero_or_one(
+                state,
+                input_bit,
+                &state_machine.branch_metric,
+                state_machine.state,
+            );
+            workspace.alpha_calc.update_next_alpha_value(
+                state,
+                &state_machine.branch_metric,
+                state_machine.state,
+            );
+        }
+    }
+    workspace.alpha_calc.recenter_next_alpha_values();
+}
+
 /// Returns the maxstar of two numbers for given decoding algorithm.
 fn maxstar(x: f64, y: f64, decoding_algo: DecodingAlgo) -> f64 {
     x.max(y)
@@ -770,6 +922,137 @@ mod tests_of_functions {
             Zero, One, Zero, One, One, One,
         ];
         assert_eq!(code_bits, correct_code_bits);
+    }
+
+    #[test]
+    fn test_decode() {
+        let code_bits_llr = [
+            -10.0, -10.0, -10.0, -10.0, 10.0, 10.0, 10.0, 10.0, -10.0, 10.0, 10.0, -10.0, 10.0,
+            -10.0, 10.0, -10.0, -10.0, -10.0,
+        ];
+        let info_bits_llr_prior = [0.0, 0.0, 0.0];
+        let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
+        let mut workspace = DecoderWorkspace::new(
+            state_machine.num_states,
+            info_bits_llr_prior.len(),
+            DecodingAlgo::MaxLogMAP(0),
+        );
+        decode(
+            &code_bits_llr,
+            &info_bits_llr_prior,
+            &mut state_machine,
+            &mut workspace,
+        )
+        .unwrap();
+        let correct_extrinsic_info = [-90.0, -90.0, 90.0];
+        assert_eq!(workspace.extrinsic_info, correct_extrinsic_info);
+    }
+
+    #[test]
+    fn test_run_bcjr_backward_pass() {
+        let code_bits_llr = [
+            -10.0, -10.0, -10.0, -10.0, 10.0, 10.0, 10.0, 10.0, -10.0, 10.0, 10.0, -10.0, 10.0,
+            -10.0, 10.0, -10.0, -10.0, -10.0,
+        ];
+        let info_bits_llr_prior = [0.0, 0.0, 0.0];
+        let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
+        let mut workspace = DecoderWorkspace::new(
+            state_machine.num_states,
+            info_bits_llr_prior.len(),
+            DecodingAlgo::MaxLogMAP(0),
+        );
+        run_bcjr_backward_pass(
+            &code_bits_llr,
+            &info_bits_llr_prior,
+            &mut state_machine,
+            &mut workspace,
+        );
+        let correct_all_beta_val = [
+            0.0, -10.0, -10.0, -20.0, 10.0, 0.0, 20.0, 50.0, 0.0, 10.0, -10.0, 0.0, 10.0, 20.0,
+            60.0, 30.0, 0.0, 10.0, 10.0, 20.0, 70.0, 40.0, 20.0, 30.0,
+        ];
+        assert_eq!(workspace.beta_calc.all_beta_val, correct_all_beta_val);
+    }
+
+    #[test]
+    fn test_run_bcjr_forward_pass() {
+        let code_bits_llr = [
+            -10.0, -10.0, -10.0, -10.0, 10.0, 10.0, 10.0, 10.0, -10.0, 10.0, 10.0, -10.0, 10.0,
+            -10.0, 10.0, -10.0, -10.0, -10.0,
+        ];
+        let info_bits_llr_prior = [0.0, 0.0, 0.0];
+        let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
+        let mut workspace = DecoderWorkspace::new(
+            state_machine.num_states,
+            info_bits_llr_prior.len(),
+            DecodingAlgo::MaxLogMAP(0),
+        );
+        run_bcjr_backward_pass(
+            &code_bits_llr,
+            &info_bits_llr_prior,
+            &mut state_machine,
+            &mut workspace,
+        );
+        run_bcjr_forward_pass(
+            &code_bits_llr,
+            &info_bits_llr_prior,
+            &mut state_machine,
+            &mut workspace,
+        );
+        let correct_extrinsic_info = [-90.0, -90.0, 90.0];
+        let correct_llr_posterior = [-100.0, -100.0, 100.0];
+        assert_eq!(workspace.extrinsic_info, correct_extrinsic_info);
+        assert_eq!(workspace.llr_posterior, correct_llr_posterior);
+    }
+
+    #[test]
+    fn test_compute_previous_beta_values() {
+        let code_bits_llr = [-8.0, 4.0, 16.0];
+        let in_bit_llr_prior = 0.0;
+        let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
+        let mut workspace =
+            DecoderWorkspace::new(state_machine.num_states, 1, DecodingAlgo::MaxLogMAP(0));
+        workspace
+            .beta_calc
+            .all_beta_val
+            .extend(&[-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        compute_previous_beta_values(
+            &code_bits_llr,
+            in_bit_llr_prior,
+            &mut state_machine,
+            &mut workspace,
+        );
+        let correct_beta_val_prev = [0.0, 4.0, 1.0, -3.0, 14.0, 10.0, 7.0, 11.0];
+        assert_eq!(workspace.beta_calc.beta_val_prev, correct_beta_val_prev);
+    }
+
+    #[test]
+    fn test_compute_next_alpha_values() {
+        let code_bits_llr = [-8.0, 4.0, 16.0];
+        let in_bit_llr_prior = 0.0;
+        let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
+        let mut workspace =
+            DecoderWorkspace::new(state_machine.num_states, 1, DecodingAlgo::MaxLogMAP(0));
+        workspace
+            .beta_calc
+            .all_beta_val
+            .extend(&[-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        workspace
+            .beta_calc
+            .all_beta_val
+            .extend(&[0.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0]);
+        workspace
+            .alpha_calc
+            .alpha_val
+            .extend(&[-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        compute_next_alpha_values(
+            &code_bits_llr,
+            in_bit_llr_prior,
+            &mut state_machine,
+            &mut workspace,
+        );
+        let correct_alpha_val_next = [0.0, -1.0, 13.0, 10.0, 1.0, -2.0, 12.0, 11.0];
+        assert_eq!(workspace.alpha_calc.alpha_val_next, correct_alpha_val_next);
     }
 
     #[test]
