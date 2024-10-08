@@ -44,3 +44,25 @@ pub enum Bit {
     /// Binary symbol `1`
     One = 1,
 }
+
+/// Enumeration of decoding algorithms, with each variant holding the number of turbo iterations
+#[derive(Clone, Eq, PartialEq, Debug, Copy)]
+pub enum DecodingAlgo {
+    /// Max-Log-MAP (lowest complexity, worst performance)
+    MaxLogMAP(u32),
+    /// Linear-Log-MAP (see Valenti & Sun, 2001)
+    LinearLogMAP(u32),
+    /// Log-MAP (highest complexity, best performance)
+    LogMAP(u32),
+}
+
+impl DecodingAlgo {
+    /// Returns number of turbo iterations held in the variant.
+    fn num_iter(self) -> u32 {
+        match self {
+            DecodingAlgo::MaxLogMAP(n)
+            | DecodingAlgo::LinearLogMAP(n)
+            | DecodingAlgo::LogMAP(n) => n,
+        }
+    }
+}
