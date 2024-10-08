@@ -322,6 +322,148 @@ pub fn encoder(
     Ok(code_bits)
 }
 
+/// Returns information bit decisions from PCCC decoder for given code bit LLR values.
+///
+/// # Parameters
+///
+/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
+///
+/// - `interleaver`: Internal interleaver for the code.
+///
+/// - `code_polynomials`: Integer representations of the generator polynomials for the code. Must
+///   have length `N >= 2` for a PCCC code of rate `1/(2*N-1)`. The first element is taken as the
+///   feedback polynomial (this corresponds to the systematic bit), and all subsequent ones as the
+///   feedforward polynomials (these correspond to the parity bits from each RSC encoder). For a
+///   code of constraint length `L`, the feedback polynomial must be in the range `(2^(L-1), 2^L)`,
+///   and each feedforward polynomial must be in the range `[1, 2^L)` and different from the
+///   feedback polynomial.
+///
+/// - `decoding_algo`: Decoding algorithm to use, and associated number of turbo iterations.
+///
+/// # Returns
+///
+/// - `info_bits_hat`: Decisions on the information bits.
+///
+/// # Errors
+///
+/// Returns an error if `code_bits_llr.len()` is incompatible with `interleaver.length` or if
+/// `code_polynomials` is invalid.
+///
+/// # Examples
+/// ```
+/// use pccc::{decoder, Bit, DecodingAlgo, Interleaver};
+/// use Bit::{One, Zero};
+///
+/// let decoding_algo = DecodingAlgo::LinearLogMAP(8);
+/// let code_polynomials = [0o13, 0o15];
+/// let interleaver = Interleaver::new(&[0, 3, 1, 2])?;
+/// let code_bits_llr = [
+///     10.0, 10.0, 10.0, -10.0, -10.0, 10.0, -10.0, 10.0, -10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+///     10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
+/// ];
+/// let info_bits_hat = decoder(
+///     &code_bits_llr,
+///     &interleaver,
+///     &code_polynomials,
+///     decoding_algo,
+/// )?;
+/// assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn decoder(
+    code_bits_llr: &[f64],
+    interleaver: &Interleaver,
+    code_polynomials: &[usize],
+    decoding_algo: DecodingAlgo,
+) -> Result<Vec<Bit>, Error> {
+    let mut sm = rsc::StateMachine::new(code_polynomials)?;
+    check_decoder_inputs(code_bits_llr, interleaver, &sm)?;
+    let num_info_bits = interleaver.length;
+    if decoding_algo.num_iter() == 0 {
+        return Ok(vec![Bit::Zero; num_info_bits]);
+    }
+    let mut ws = rsc::DecoderWorkspace::new(sm.num_states, num_info_bits, decoding_algo);
+    let (top_code_bits_llr, bottom_code_bits_llr) = bcjr_inputs(code_bits_llr, interleaver, &sm);
+    let mut info_bits_llr_prior = vec![0.0; num_info_bits];
+    for i_iter in 0 .. decoding_algo.num_iter() {
+        // Bottom RSC decoder
+        if i_iter > 0 {
+            interleaver.interleave(&ws.extrinsic_info, &mut info_bits_llr_prior)?;
+        }
+        rsc::decode(
+            &bottom_code_bits_llr,
+            &info_bits_llr_prior,
+            &mut sm,
+            &mut ws,
+        )?;
+        // Top RSC decoder
+        interleaver.deinterleave(&ws.extrinsic_info, &mut info_bits_llr_prior)?;
+        rsc::decode(&top_code_bits_llr, &info_bits_llr_prior, &mut sm, &mut ws)?;
+    }
+    Ok(bpsk_slicer(&ws.llr_posterior))
+}
+
+/// Checks validity of decoder inputs.
+fn check_decoder_inputs(
+    code_bits_llr: &[f64],
+    interleaver: &Interleaver,
+    sm: &rsc::StateMachine,
+) -> Result<(), Error> {
+    let num_info_bits = interleaver.length;
+    let num_code_bits_per_rsc = (num_info_bits + sm.memory_len) * sm.num_output_bits;
+    let expected_code_bits_llr_len = 2 * num_code_bits_per_rsc - num_info_bits;
+    if code_bits_llr.len() == expected_code_bits_llr_len {
+        Ok(())
+    } else {
+        Err(Error::InvalidInput(format!(
+            "For interleaver of length {}, expected {} code bit LLR values (found {})",
+            num_info_bits,
+            expected_code_bits_llr_len,
+            code_bits_llr.len(),
+        )))
+    }
+}
+
+/// Returns code bit LLR values to be input to top and bottom BCJR decoders.
+fn bcjr_inputs(
+    code_bits_llr: &[f64],
+    interleaver: &Interleaver,
+    sm: &rsc::StateMachine,
+) -> (Vec<f64>, Vec<f64>) {
+    let num_info_bits = interleaver.length;
+    let num_out_per_in = 2 * sm.num_output_bits - 1;
+    let num_code_bits_per_rsc = (num_info_bits + sm.memory_len) * sm.num_output_bits;
+    let mut top_code_bits_llr = Vec::with_capacity(num_code_bits_per_rsc);
+    let mut bottom_code_bits_llr = Vec::with_capacity(num_code_bits_per_rsc);
+    // Information bits
+    for k in 0 .. num_info_bits {
+        let i_top = k * num_out_per_in;
+        top_code_bits_llr.extend_from_slice(&code_bits_llr[i_top .. i_top + sm.num_output_bits]);
+        let i_bottom = interleaver.all_in_index_given_out_index[k] * num_out_per_in;
+        bottom_code_bits_llr.push(code_bits_llr[i_bottom]);
+        bottom_code_bits_llr.extend_from_slice(
+            &code_bits_llr[i_bottom + sm.num_output_bits .. i_bottom + num_out_per_in],
+        );
+    }
+    // Tail bits
+    top_code_bits_llr.extend_from_slice(
+        &code_bits_llr[num_info_bits * num_out_per_in
+            .. num_info_bits * num_out_per_in + sm.memory_len * sm.num_output_bits],
+    );
+    bottom_code_bits_llr.extend_from_slice(
+        &code_bits_llr[num_info_bits * num_out_per_in + sm.memory_len * sm.num_output_bits ..],
+    );
+    (top_code_bits_llr, bottom_code_bits_llr)
+}
+
+/// Returns BPSK slicer output.
+#[must_use]
+pub(crate) fn bpsk_slicer(syms: &[f64]) -> Vec<Bit> {
+    syms.iter()
+        .map(|&x| if x >= 0.0 { Bit::Zero } else { Bit::One })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests_of_interleaver {
     use super::*;
@@ -420,5 +562,34 @@ mod tests_of_functions {
             One, One, One, One, One, Zero, One, One, One,
         ];
         assert_eq!(code_bits, correct_code_bits);
+    }
+
+    #[test]
+    fn test_decoder() {
+        let decoding_algo = DecodingAlgo::LinearLogMAP(8);
+        let code_polynomials = [0o13, 0o15];
+        let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
+        // Invalid inputs
+        let code_bits_llr = [10.0, -10.0, -10.0];
+        assert!(decoder(
+            &code_bits_llr,
+            &interleaver,
+            &code_polynomials,
+            decoding_algo
+        )
+        .is_err());
+        // Valid inputs
+        let code_bits_llr = [
+            10.0, 10.0, 10.0, -10.0, -10.0, 10.0, -10.0, 10.0, -10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+            10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
+        ];
+        let info_bits_hat = decoder(
+            &code_bits_llr,
+            &interleaver,
+            &code_polynomials,
+            decoding_algo,
+        )
+        .unwrap();
+        assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
     }
 }
