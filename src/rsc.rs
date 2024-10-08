@@ -303,6 +303,77 @@ impl AlphaCalculator {
     }
 }
 
+/// Workspace for decoder
+#[derive(Debug)]
+pub(crate) struct DecoderWorkspace {
+    /// Calculator for beta values of all states after all information bits
+    beta_calc: BetaCalculator,
+    /// Calculator for alpha values of all states before an information bit
+    alpha_calc: AlphaCalculator,
+    /// Decoding metric for bit `Zero`
+    metric_for_zero: f64,
+    /// Decoding metric for bit `One`
+    metric_for_one: f64,
+    /// Buffer for extrinsic information values for all information bits
+    pub(crate) extrinsic_info: Vec<f64>,
+    /// Buffer for posterior LLR values for all information bits
+    pub(crate) llr_posterior: Vec<f64>,
+}
+
+impl DecoderWorkspace {
+    /// Returns new workspace for decoder.
+    pub(crate) fn new(
+        num_states: usize,
+        num_info_bits: usize,
+        decoding_algo: DecodingAlgo,
+    ) -> Self {
+        Self {
+            beta_calc: BetaCalculator::new(num_states, num_info_bits, decoding_algo),
+            alpha_calc: AlphaCalculator::new(num_states, decoding_algo),
+            metric_for_zero: -INF,
+            metric_for_one: -INF,
+            extrinsic_info: Vec::with_capacity(num_info_bits),
+            llr_posterior: Vec::with_capacity(num_info_bits),
+        }
+    }
+
+    /// Initializes metrics for an information bit being `Zero` and `One`.
+    fn init_metrics_for_zero_and_one(&mut self) {
+        self.metric_for_zero = -INF;
+        self.metric_for_one = -INF;
+    }
+
+    /// Updates metric for an information bit being `Zero` or `One`.
+    fn update_metric_for_zero_or_one(
+        &mut self,
+        state: State,
+        info_bit: Bit,
+        branch_metric: &BranchMetric,
+        next_state: State,
+    ) {
+        let num_beta_val = self.beta_calc.all_beta_val.len();
+        let beta_next =
+            self.beta_calc.all_beta_val[num_beta_val - self.beta_calc.num_states + next_state.0];
+        let cand_metric = self.alpha_calc.alpha_val[state.0] + branch_metric.parity + beta_next;
+        match info_bit {
+            Bit::Zero => {
+                self.metric_for_zero = maxstar(
+                    self.metric_for_zero,
+                    cand_metric,
+                    self.alpha_calc.decoding_algo,
+                );
+            }
+            Bit::One => {
+                self.metric_for_one = maxstar(
+                    self.metric_for_one,
+                    cand_metric,
+                    self.alpha_calc.decoding_algo,
+                );
+            }
+        };
+    }
+}
+
 /// Returns constraint length corresponding to given code polynomials.
 fn constraint_length(code_polynomials: &[usize]) -> Result<usize, Error> {
     if code_polynomials.len() < 2 {
