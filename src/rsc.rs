@@ -234,6 +234,75 @@ impl BetaCalculator {
     }
 }
 
+/// Calculator for alpha values
+#[derive(Debug)]
+struct AlphaCalculator {
+    /// Number of encoder states
+    num_states: usize,
+    /// Decoding algorithm to use
+    decoding_algo: DecodingAlgo,
+    /// Vector of alpha values for all states before an information bit
+    alpha_val: Vec<f64>,
+    /// Vector of alpha values at next time instant
+    alpha_val_next: Vec<f64>,
+}
+
+impl AlphaCalculator {
+    /// Returns new calculator for alpha values.
+    fn new(num_states: usize, decoding_algo: DecodingAlgo) -> Self {
+        Self {
+            num_states,
+            decoding_algo,
+            alpha_val: Vec::with_capacity(num_states),
+            alpha_val_next: Vec::with_capacity(num_states),
+        }
+    }
+
+    /// Initializes alpha values for all states before an information bit.
+    fn init_alpha_values_before_info_bit(&mut self) {
+        self.alpha_val.clear();
+        self.alpha_val.push(0.0);
+        for _ in 1 .. self.num_states {
+            self.alpha_val.push(-INF);
+        }
+    }
+
+    /// Initializes alpha values for all states at next time instant.
+    fn init_next_alpha_values(&mut self) {
+        self.alpha_val_next.clear();
+        for _ in 0 .. self.num_states {
+            self.alpha_val_next.push(-INF);
+        }
+    }
+
+    /// Updates alpha value for a state at next time instant.
+    fn update_next_alpha_value(
+        &mut self,
+        state: State,
+        branch_metric: &BranchMetric,
+        next_state: State,
+    ) {
+        self.alpha_val_next[next_state.0] = maxstar(
+            self.alpha_val_next[next_state.0],
+            self.alpha_val[state.0] + branch_metric.value(),
+            self.decoding_algo,
+        );
+    }
+
+    /// Recenters alpha values for all states at next time instant.
+    fn recenter_next_alpha_values(&mut self) {
+        let alpha_val_next0 = self.alpha_val_next[0];
+        self.alpha_val_next
+            .iter_mut()
+            .for_each(|x| *x -= alpha_val_next0);
+    }
+
+    /// Updates alpha values for all states before the next information bit.
+    fn update_alpha_values_before_info_bit(&mut self) {
+        std::mem::swap(&mut self.alpha_val, &mut self.alpha_val_next);
+    }
+}
+
 /// Returns constraint length corresponding to given code polynomials.
 fn constraint_length(code_polynomials: &[usize]) -> Result<usize, Error> {
     if code_polynomials.len() < 2 {
