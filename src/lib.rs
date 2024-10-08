@@ -33,3 +33,12 @@ pub enum Error {
     #[error("Unknown error")]
     Unknown,
 }
+
+/// Enumeration of binary symbol values
+#[derive(Clone, Eq, PartialEq, Debug, Copy)]
+pub enum Bit {
+    /// Binary symbol `0`
+    Zero = 0,
+    /// Binary symbol `1`
+    One = 1,
+}
