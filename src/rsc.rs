@@ -2,6 +2,8 @@
 
 use crate::{Bit, DecodingAlgo, Error};
 
+const INF: f64 = 1e100;
+
 /// State of an RSC encoder/decoder
 #[derive(Clone, Eq, PartialEq, Debug, Copy)]
 struct State(usize);
@@ -145,6 +147,89 @@ impl StateMachine {
         match input_bit {
             Bit::Zero => self.state.0,
             Bit::One => self.num_states + self.state.0,
+        }
+    }
+}
+
+/// Calculator for beta values
+#[derive(Debug)]
+struct BetaCalculator {
+    /// Number of encoder states
+    num_states: usize,
+    /// Decoding algorithm to use
+    decoding_algo: DecodingAlgo,
+    /// Vector of beta values for all states after all information bits
+    all_beta_val: Vec<f64>,
+    /// Vector of beta values at previous time instant
+    beta_val_prev: Vec<f64>,
+}
+
+impl BetaCalculator {
+    /// Returns new calculator for beta values.
+    fn new(num_states: usize, num_info_bits: usize, decoding_algo: DecodingAlgo) -> Self {
+        Self {
+            num_states,
+            decoding_algo,
+            all_beta_val: Vec::with_capacity(num_info_bits * num_states),
+            beta_val_prev: Vec::with_capacity(num_states),
+        }
+    }
+
+    /// Initializes beta values for all states after the last information bit.
+    fn init_beta_values_after_last_info_bit(&mut self) {
+        self.all_beta_val.clear();
+        self.all_beta_val.push(0.0);
+        for _ in 1 .. self.num_states {
+            self.all_beta_val.push(-INF);
+        }
+    }
+
+    /// Initializes beta values for all states at previous time instant.
+    fn init_previous_beta_values(&mut self) {
+        self.beta_val_prev.clear();
+        for _ in 0 .. self.num_states {
+            self.beta_val_prev.push(-INF);
+        }
+    }
+
+    /// Updates beta value for a state at previous time instant.
+    fn update_previous_beta_value(
+        &mut self,
+        state: State,
+        branch_metric: &BranchMetric,
+        next_state: State,
+    ) {
+        let num_beta_val = self.all_beta_val.len();
+        self.beta_val_prev[state.0] = maxstar(
+            self.beta_val_prev[state.0],
+            branch_metric.value()
+                + self.all_beta_val[num_beta_val - self.num_states + next_state.0],
+            self.decoding_algo,
+        );
+    }
+
+    /// Recenters beta values for all states at previous time instant.
+    fn recenter_previous_beta_values(&mut self) {
+        let beta_val_prev0 = self.beta_val_prev[0];
+        self.beta_val_prev
+            .iter_mut()
+            .for_each(|x| *x -= beta_val_prev0);
+    }
+
+    /// Updates beta values for all states after the last information bit.
+    fn update_beta_values_after_last_info_bit(&mut self) {
+        std::mem::swap(&mut self.beta_val_prev, &mut self.all_beta_val);
+    }
+
+    /// Saves beta values for all states after an information bit.
+    fn save_beta_values_after_info_bit(&mut self) {
+        self.all_beta_val.extend(&self.beta_val_prev);
+    }
+
+    /// Deletes beta values for all states after an information bit.
+    fn delete_beta_values_after_info_bit(&mut self) {
+        for _ in 0 .. self.num_states {
+            self.all_beta_val.pop();
         }
     }
 }
