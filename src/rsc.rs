@@ -1,6 +1,6 @@
 //! Recursive systematic convolutional (RSC) encoder and decoder
 
-use crate::{Bit, Error};
+use crate::{Bit, DecodingAlgo, Error};
 
 /// State of an RSC encoder/decoder
 #[derive(Clone, Eq, PartialEq, Debug, Copy)]
@@ -230,6 +230,32 @@ pub(crate) fn encode(
         state_machine.generate_output_bits(None);
         code_bits.extend(&state_machine.output_bits);
     }
+}
+
+/// Returns the maxstar of two numbers for given decoding algorithm.
+fn maxstar(x: f64, y: f64, decoding_algo: DecodingAlgo) -> f64 {
+    x.max(y)
+        + match decoding_algo {
+            DecodingAlgo::MaxLogMAP(_) => 0.0,
+            DecodingAlgo::LinearLogMAP(_) => linear_log_map_correction_term((x - y).abs()),
+            DecodingAlgo::LogMAP(_) => log_map_correction_term((x - y).abs()),
+        }
+}
+
+/// Returns the correction term for Linear-Log-MAP decoding algorithm (Valenti & Sun, 2001).
+fn linear_log_map_correction_term(abs_diff: f64) -> f64 {
+    let thresh = 2.506_816_400_220_01;
+    if abs_diff > thresh {
+        0.0
+    } else {
+        let slope = -0.249_041_818_917_1;
+        slope * (abs_diff - thresh)
+    }
+}
+
+/// Returns the correction term for Log-MAP decoding algorithm.
+fn log_map_correction_term(abs_diff: f64) -> f64 {
+    (-abs_diff).exp().ln_1p()
 }
 
 #[cfg(test)]
@@ -519,5 +545,44 @@ mod tests_of_functions {
             Zero, One, Zero, One, One, One,
         ];
         assert_eq!(code_bits, correct_code_bits);
+    }
+
+    #[test]
+    fn test_maxstar() {
+        assert_float_eq!(
+            maxstar(1.2, 1.3, DecodingAlgo::MaxLogMAP(0)),
+            1.3,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
+            maxstar(-1.2, -1.3, DecodingAlgo::MaxLogMAP(0)),
+            -1.2,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
+            maxstar(1.3, -1.3, DecodingAlgo::LinearLogMAP(0)),
+            1.3,
+            abs <= 1e-8
+        );
+        assert!(
+            (maxstar(-1.2, 1.2, DecodingAlgo::LinearLogMAP(0)) - 1.226_601_750_600_968_3).abs()
+                < 1e-8
+        );
+        assert!((maxstar(1.2, 1.3, DecodingAlgo::LogMAP(0)) - 1.944_396_660_073_571).abs() < 1e-8);
+        assert!(
+            (maxstar(-1.2, -1.3, DecodingAlgo::LogMAP(0)) + 0.555_603_339_926_429_1).abs() < 1e-8
+        );
+    }
+
+    #[test]
+    fn test_linear_log_map_correction_term() {
+        assert!((linear_log_map_correction_term(2.6) - 0.0).abs() < 1e-8);
+        assert!((linear_log_map_correction_term(2.4) - 0.026_601_750_600_968_28).abs() < 1e-8);
+    }
+
+    #[test]
+    fn test_log_map_correction_term() {
+        assert!((log_map_correction_term(2.6) - 0.071_644_691_967_669_72).abs() < 1e-8);
+        assert!((log_map_correction_term(2.4) - 0.086_836_152_153_949_63).abs() < 1e-8);
     }
 }
