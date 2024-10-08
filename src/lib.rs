@@ -246,6 +246,82 @@ impl Interleaver {
     }
 }
 
+/// Returns code bits from PCCC encoder for given information bits.
+///
+/// # Parameters
+///
+/// - `info_bits`: Information bits to be encoded.
+///
+/// - `interleaver`: Internal interleaver for the code.
+///
+/// - `code_polynomials`: Integer representations of the generator polynomials for the code. Must
+///   have length `N >= 2` for a PCCC code of rate `1/(2*N-1)`. The first element is taken as the
+///   feedback polynomial (this corresponds to the systematic bit), and all subsequent ones as the
+///   feedforward polynomials (these correspond to the parity bits from each RSC encoder). For a
+///   code of constraint length `L`, the feedback polynomial must be in the range `(2^(L-1), 2^L)`,
+///   and each feedforward polynomial must be in the range `[1, 2^L)` and different from the
+///   feedback polynomial.
+///
+/// # Returns
+///
+/// - `code_bits`: Code bits from the PCCC encoder.
+///
+/// # Errors
+///
+/// Returns an error if `info_bits.len()` is not equal to `interleaver.length` or if
+/// `code_polynomials` is invalid.
+///
+/// # Examples
+/// ```
+/// use pccc::{encoder, Bit, Interleaver};
+/// use Bit::{One, Zero};
+///
+/// let code_polynomials = [0o13, 0o15];
+/// let interleaver = Interleaver::new(&[0, 3, 1, 2])?;
+/// let info_bits = [Zero, One, One, Zero];
+/// let code_bits = encoder(&info_bits, &interleaver, &code_polynomials)?;
+/// assert_eq!(
+///     code_bits,
+///     [
+///         Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero, Zero,
+///         One, One, One, One, One, Zero, One, One, One,
+///     ]
+/// );
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn encoder(
+    info_bits: &[Bit],
+    interleaver: &Interleaver,
+    code_polynomials: &[usize],
+) -> Result<Vec<Bit>, Error> {
+    let mut sm = rsc::StateMachine::new(code_polynomials)?;
+    let num_info_bits = info_bits.len();
+    let num_code_bits_per_rsc = (num_info_bits + sm.memory_len) * sm.num_output_bits;
+    // Top RSC encoder output
+    let mut top_code_bits = Vec::with_capacity(num_code_bits_per_rsc);
+    rsc::encode(info_bits, &mut sm, &mut top_code_bits);
+    // Bottom RSC encoder output
+    let mut bottom_code_bits = Vec::with_capacity(num_code_bits_per_rsc);
+    let mut interleaved_info_bits = Vec::with_capacity(num_info_bits);
+    interleaver.interleave(info_bits, &mut interleaved_info_bits)?;
+    rsc::encode(&interleaved_info_bits, &mut sm, &mut bottom_code_bits);
+    // PCCC encoder output
+    let mut code_bits = Vec::with_capacity(2 * num_code_bits_per_rsc - num_info_bits);
+    let i_first_rsc_tail_code_bit = num_info_bits * sm.num_output_bits;
+    // Code bits corresponding to information bits
+    for (top_chunk, bottom_chunk) in top_code_bits[.. i_first_rsc_tail_code_bit]
+        .chunks_exact(sm.num_output_bits)
+        .zip(bottom_code_bits[.. i_first_rsc_tail_code_bit].chunks_exact(sm.num_output_bits))
+    {
+        code_bits.extend(top_chunk.iter());
+        code_bits.extend(bottom_chunk.iter().skip(1));
+    }
+    // Code bits corresponding to tail bits
+    code_bits.extend(top_code_bits[i_first_rsc_tail_code_bit ..].iter());
+    code_bits.extend(bottom_code_bits[i_first_rsc_tail_code_bit ..].iter());
+    Ok(code_bits)
+}
+
 #[cfg(test)]
 mod tests_of_interleaver {
     use super::*;
@@ -321,5 +397,28 @@ mod tests_of_interleaver {
             interleaver.all_out_index_given_in_index,
             [0, 7, 2, 1, 4, 3, 6, 5]
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_of_functions {
+    use super::*;
+    use Bit::{One, Zero};
+
+    #[test]
+    fn test_encoder() {
+        let code_polynomials = [0o13, 0o15];
+        let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
+        // Invalid inputs
+        let info_bits = [Zero, One, One];
+        assert!(encoder(&info_bits, &interleaver, &code_polynomials).is_err());
+        // Valid inputs
+        let info_bits = [Zero, One, One, Zero];
+        let code_bits = encoder(&info_bits, &interleaver, &code_polynomials).unwrap();
+        let correct_code_bits = [
+            Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero, Zero,
+            One, One, One, One, One, Zero, One, One, One,
+        ];
+        assert_eq!(code_bits, correct_code_bits);
     }
 }
