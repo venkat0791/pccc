@@ -21,3 +21,15 @@
     unused_qualifications
 )]
 
+use thiserror::Error;
+
+/// Custom error type
+#[derive(Error, Debug)]
+pub enum Error {
+    /// Invalid input error
+    #[error("{0}")]
+    InvalidInput(String),
+    /// Unknown error
+    #[error("Unknown error")]
+    Unknown,
+}
