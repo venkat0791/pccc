@@ -23,6 +23,8 @@
 
 use thiserror::Error;
 
+mod rsc;
+
 /// Custom error type
 #[derive(Error, Debug)]
 pub enum Error {
