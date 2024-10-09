@@ -1,6 +1,27 @@
 //! Simulator to evaluate performance of LTE rate-1/3 PCCC over BPSK-AWGN channel
 
-use crate::{Error, Interleaver};
+use serde::{Deserialize, Serialize};
+
+use crate::{DecodingAlgo, Error, Interleaver};
+
+/// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
+#[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
+pub struct SimParams {
+    /// Number of information bits per block
+    pub num_info_bits_per_block: u32,
+    /// Ratio (dB) of symbol energy to noise power spectral density at BPSK-AWGN channel output
+    pub es_over_n0_db: f64,
+    /// Decoding algorithm to be used
+    pub decoding_algo: DecodingAlgo,
+    /// Desired minimum number of block errors
+    pub num_block_errors_min: u32,
+    /// Number of blocks to be transmitted per run
+    pub num_blocks_per_run: u32,
+    /// Minimum number of runs of blocks to be simulated
+    pub num_runs_min: u32,
+    /// Maximum number of runs of blocks to be simulated
+    pub num_runs_max: u32,
+}
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
 ///
@@ -42,6 +63,22 @@ pub fn interleaver(num_info_bits: usize) -> Result<Interleaver, Error> {
         .map(|out_index| ((coeff1 + coeff2 * out_index) * out_index) % num_info_bits)
         .collect();
     Interleaver::new(&perm)
+}
+
+/// Checks validity of simulation parameters.
+fn check_sim_params(params: &SimParams) -> Result<(), Error> {
+    if params.num_blocks_per_run == 0 {
+        return Err(Error::InvalidInput(
+            "Number of blocks per run cannot be zero".to_string(),
+        ));
+    }
+    if params.num_runs_min > params.num_runs_max {
+        return Err(Error::InvalidInput(format!(
+            "Minimum number of runs ({}) exceeds maximum number of runs ({})",
+            params.num_runs_min, params.num_runs_max
+        )));
+    }
+    Ok(())
 }
 
 /// Returns QPP coefficients for `40 <= num_info_bits <= 128`.
@@ -327,6 +364,42 @@ mod tests_of_functions {
         }
         // Invalid input
         assert!(interleaver(6208).is_err());
+    }
+
+    #[test]
+    fn test_check_sim_params() {
+        // Invalid input
+        let params = SimParams {
+            num_info_bits_per_block: 40,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 10,
+            num_blocks_per_run: 0,
+            num_runs_min: 1,
+            num_runs_max: 2,
+        };
+        assert!(check_sim_params(&params).is_err());
+        let params = SimParams {
+            num_info_bits_per_block: 40,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 10,
+            num_blocks_per_run: 1,
+            num_runs_min: 2,
+            num_runs_max: 1,
+        };
+        assert!(check_sim_params(&params).is_err());
+        // Valid input
+        let params = SimParams {
+            num_info_bits_per_block: 40,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 10,
+            num_blocks_per_run: 1,
+            num_runs_min: 1,
+            num_runs_max: 2,
+        };
+        assert!(check_sim_params(&params).is_ok());
     }
 
     #[test]
