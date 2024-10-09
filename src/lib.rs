@@ -22,6 +22,7 @@
 )]
 
 use rand::{rngs::ThreadRng, seq::SliceRandom};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod lte;
@@ -48,7 +49,7 @@ pub enum Bit {
 }
 
 /// Enumeration of decoding algorithms, with each variant holding the number of turbo iterations
-#[derive(Clone, Eq, PartialEq, Debug, Copy)]
+#[derive(Clone, Eq, PartialEq, Debug, Copy, Deserialize, Serialize)]
 pub enum DecodingAlgo {
     /// Max-Log-MAP (lowest complexity, worst performance)
     MaxLogMAP(u32),
