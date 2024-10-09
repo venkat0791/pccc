@@ -23,6 +23,99 @@ pub struct SimParams {
     pub num_runs_max: u32,
 }
 
+/// Results from parallel-concatenated convolutional code simulation over BPSK-AWGN channel
+#[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
+pub struct SimResults {
+    /// Simulation parameters
+    pub params: SimParams,
+    /// Number of blocks transmitted
+    pub num_blocks: u32,
+    /// Number of information bits transmitted
+    pub num_info_bits: u32,
+    /// Number of block errors
+    pub num_block_errors: u32,
+    /// Number of information bit errors
+    pub num_info_bit_errors: u32,
+}
+
+impl SimResults {
+    /// Returns initialized simulation results.
+    #[must_use]
+    pub fn new(params: &SimParams) -> Self {
+        Self {
+            params: *params,
+            num_blocks: 0,
+            num_info_bits: 0,
+            num_block_errors: 0,
+            num_info_bit_errors: 0,
+        }
+    }
+
+    /// Returns block error rate.
+    #[must_use]
+    pub fn block_error_rate(&self) -> f64 {
+        if self.num_blocks > 0 {
+            f64::from(self.num_block_errors) / f64::from(self.num_blocks)
+        } else {
+            0.0
+        }
+    }
+
+    /// Returns information bit error rate.
+    #[must_use]
+    pub fn info_bit_error_rate(&self) -> f64 {
+        if self.num_info_bits > 0 {
+            f64::from(self.num_info_bit_errors) / f64::from(self.num_info_bits)
+        } else {
+            0.0
+        }
+    }
+
+    /// Prints progress message.
+    pub fn print_progress_message(&self) {
+        if self.run_complete() {
+            eprint!(
+                "\r{:5} bits/block, Es/N0 = {:6.3} dB: \
+                 BER = {:9.4e}, BLER = {:9.4e} ({}/{}, {}/{})",
+                self.params.num_info_bits_per_block,
+                self.params.es_over_n0_db,
+                self.info_bit_error_rate(),
+                self.block_error_rate(),
+                self.num_info_bit_errors,
+                self.num_info_bits,
+                self.num_block_errors,
+                self.num_blocks,
+            );
+            if self.sim_complete() {
+                eprintln!();
+            }
+        }
+    }
+
+    /// Returns `true` iff a run of blocks is now complete.
+    fn run_complete(&self) -> bool {
+        self.num_blocks % self.params.num_blocks_per_run == 0
+    }
+
+    /// Returns `true` iff the simulation is now complete.
+    fn sim_complete(&self) -> bool {
+        self.run_complete()
+            && self.num_blocks >= self.params.num_runs_min * self.params.num_blocks_per_run
+            && (self.num_block_errors >= self.params.num_block_errors_min
+                || self.num_blocks >= self.params.num_runs_max * self.params.num_blocks_per_run)
+    }
+
+    /// Updates simulation results after a block.
+    fn update_after_block(&mut self, num_info_bit_errors_this_block: u32) {
+        self.num_blocks += 1;
+        self.num_info_bits += self.params.num_info_bits_per_block;
+        if num_info_bit_errors_this_block > 0 {
+            self.num_block_errors += 1;
+            self.num_info_bit_errors += num_info_bit_errors_this_block;
+        }
+    }
+}
+
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
 ///
 /// # Parameters
@@ -335,6 +428,118 @@ fn qpp_coefficients_4160_to_6144_bits(num_info_bits: usize) -> Result<(usize, us
 /// Returns error message for invalid number of information bits.
 fn invalid_num_info_bits_message(num_info_bits: usize) -> String {
     format!("Number of information bits {num_info_bits} is not in Table 5.1.3-3 of 3GPP TS 36.212")
+}
+
+#[cfg(test)]
+mod tests_of_simresults {
+    use super::*;
+    use float_eq::assert_float_eq;
+
+    fn params_for_test() -> SimParams {
+        SimParams {
+            num_info_bits_per_block: 48,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 100,
+            num_blocks_per_run: 1000,
+            num_runs_min: 1,
+            num_runs_max: 10,
+        }
+    }
+
+    fn results_for_test(num_blocks: u32, num_block_errors: u32) -> SimResults {
+        let params = params_for_test();
+        let num_info_bits = num_blocks * params.num_info_bits_per_block;
+        let num_info_bit_errors = num_block_errors * 10;
+        SimResults {
+            params,
+            num_blocks,
+            num_info_bits,
+            num_block_errors,
+            num_info_bit_errors,
+        }
+    }
+
+    #[test]
+    fn test_new() {
+        let results = SimResults::new(&params_for_test());
+        assert_eq!(results.num_blocks, 0);
+        assert_eq!(results.num_info_bits, 0);
+        assert_eq!(results.num_block_errors, 0);
+        assert_eq!(results.num_info_bit_errors, 0);
+    }
+
+    #[test]
+    fn test_block_error_rate() {
+        let results = results_for_test(2000, 10);
+        assert_float_eq!(results.block_error_rate(), 10.0 / 2000.0, abs <= 1e-8);
+    }
+
+    #[test]
+    fn test_info_bit_error_rate() {
+        let results = results_for_test(2000, 10);
+        assert_float_eq!(results.info_bit_error_rate(), 100.0 / 96000.0, abs <= 1e-8);
+    }
+
+    #[test]
+    fn test_print_progress_message() {
+        let results = results_for_test(1000, 10);
+        results.print_progress_message();
+    }
+
+    #[test]
+    fn test_run_complete() {
+        let results = results_for_test(999, 0);
+        assert!(!results.run_complete());
+        let results = results_for_test(1000, 0);
+        assert!(results.run_complete());
+        let results = results_for_test(1001, 0);
+        assert!(!results.run_complete());
+    }
+
+    #[test]
+    fn test_sim_complete() {
+        // Test of `num_block_errors_min`
+        let results = results_for_test(5000, 99);
+        assert!(!results.sim_complete());
+        let results = results_for_test(5000, 100);
+        assert!(results.sim_complete());
+        // Test of `num_blocks_per_run`
+        let results = results_for_test(4999, 500);
+        assert!(!results.sim_complete());
+        let results = results_for_test(5000, 500);
+        assert!(results.sim_complete());
+        let results = results_for_test(5001, 500);
+        assert!(!results.sim_complete());
+        // Test of `num_runs_min`
+        let results = results_for_test(999, 500);
+        assert!(!results.sim_complete());
+        let results = results_for_test(1000, 500);
+        assert!(results.sim_complete());
+        // Test of `num_runs_max`
+        let results = results_for_test(9999, 50);
+        assert!(!results.sim_complete());
+        let results = results_for_test(10000, 50);
+        assert!(results.sim_complete());
+    }
+
+    #[test]
+    fn test_update_after_block() {
+        // Zero info bit errors
+        let mut results = results_for_test(100, 10);
+        results.update_after_block(0);
+        assert_eq!(results.num_blocks, 101);
+        assert_eq!(results.num_info_bits, 4848);
+        assert_eq!(results.num_block_errors, 10);
+        assert_eq!(results.num_info_bit_errors, 100);
+        // Nonzero info bit errors
+        let mut results = results_for_test(100, 10);
+        results.update_after_block(10);
+        assert_eq!(results.num_blocks, 101);
+        assert_eq!(results.num_info_bits, 4848);
+        assert_eq!(results.num_block_errors, 11);
+        assert_eq!(results.num_info_bit_errors, 110);
+    }
 }
 
 #[cfg(test)]
