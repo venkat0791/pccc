@@ -4,7 +4,7 @@ use rand::prelude::{Rng, ThreadRng};
 use rand_distr::StandardNormal;
 use serde::{Deserialize, Serialize};
 
-use crate::{Bit, DecodingAlgo, Error, Interleaver};
+use crate::{decoder, encoder, Bit, DecodingAlgo, Error, Interleaver};
 
 /// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
@@ -116,6 +116,64 @@ impl SimResults {
             self.num_info_bit_errors += num_info_bit_errors_this_block;
         }
     }
+}
+
+/// Runs simulation of LTE rate-1/3 PCCC over BPSK-AWGN channel.
+///
+/// # Parameters
+///
+/// - `params`: Parameters for the simulation.
+///
+/// - `rng`: Random number generator for the simulation.
+///
+/// # Returns
+///
+/// - `results`: Results from the simulation.
+///
+/// # Errors
+///
+/// Returns an error if `params.num_info_bits_per_block` is not one of the values specified in
+/// Table 5.1.3-3 of 3GPP TS 36.212, if `params.num_blocks_per_run` is `0`, or if
+/// `params.num_runs_min` exceeds `params.num_runs_max`.
+///
+/// # Examples
+///
+/// ```
+/// use pccc::{lte, DecodingAlgo};
+///
+/// let mut rng = rand::thread_rng();
+/// let params = lte::SimParams {
+///     num_info_bits_per_block: 48,
+///     es_over_n0_db: -3.0,
+///     decoding_algo: DecodingAlgo::LinearLogMAP(8),
+///     num_block_errors_min: 10,
+///     num_blocks_per_run: 10,
+///     num_runs_min: 1,
+///     num_runs_max: 2,
+/// };
+/// let results = lte::bpsk_awgn_sim(&params, &mut rng)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResults, Error> {
+    check_sim_params(params)?;
+    let code_polynomials = [0o13, 0o15];
+    let interleaver = interleaver(params.num_info_bits_per_block as usize)?;
+    let mut results = SimResults::new(params);
+    while !results.sim_complete() {
+        let info_bits = random_bits(interleaver.length, rng);
+        let code_bits = encoder(&info_bits, &interleaver, &code_polynomials)?;
+        let code_bits_llr = bpsk_awgn_channel(&code_bits, params.es_over_n0_db, rng);
+        let info_bits_hat = decoder(
+            &code_bits_llr,
+            &interleaver,
+            &code_polynomials,
+            params.decoding_algo,
+        )?;
+        let num_info_bit_errors_this_block = error_count(&info_bits_hat, &info_bits);
+        results.update_after_block(num_info_bit_errors_this_block);
+        results.print_progress_message();
+    }
+    Ok(results)
 }
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
@@ -586,6 +644,34 @@ mod tests_of_simresults {
 mod tests_of_functions {
     use super::*;
     use Bit::{One, Zero};
+
+
+    #[test]
+    fn test_bpsk_awgn_sim() {
+        let mut rng = rand::thread_rng();
+        // Invalid input
+        let params = SimParams {
+            num_info_bits_per_block: 32,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 10,
+            num_blocks_per_run: 10,
+            num_runs_min: 1,
+            num_runs_max: 2,
+        };
+        assert!(bpsk_awgn_sim(&params, &mut rng).is_err());
+        // Valid input
+        let params = SimParams {
+            num_info_bits_per_block: 48,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 10,
+            num_blocks_per_run: 10,
+            num_runs_min: 1,
+            num_runs_max: 2,
+        };
+        assert!(bpsk_awgn_sim(&params, &mut rng).is_ok());
+    }
 
     #[test]
     fn test_interleaver() {
