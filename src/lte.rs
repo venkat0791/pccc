@@ -458,6 +458,18 @@ fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64, rng: &mut ThreadRng) -> V
         .collect()
 }
 
+/// Returns number of errors in a given sequence with respect to a given reference sequence.
+fn error_count<T: PartialEq>(seq: &[T], ref_seq: &[T]) -> u32 {
+    u32::try_from(
+        ref_seq
+            .iter()
+            .zip(seq.iter())
+            .filter(|&(x, y)| x != y)
+            .count(),
+    )
+    .expect("Number of errors must be within range of `u32` type")
+}
+
 #[cfg(test)]
 mod tests_of_simresults {
     use super::*;
@@ -753,5 +765,19 @@ mod tests_of_functions {
             .sum::<f64>()
             / f64::from(num_bits as u32);
         assert!(noise_var_est > 7.2 * es_over_n0 && noise_var_est < 8.8 * es_over_n0);
+    }
+
+    #[test]
+    fn test_error_count() {
+        assert_eq!(error_count(&[], &[One, Zero]), 0);
+        assert_eq!(error_count(&[One, Zero], &[]), 0);
+        // Longer `seq`
+        let ref_seq = [One, Zero, Zero, One, One, One, Zero, Zero];
+        let seq = [One, One, Zero, Zero, One, One, Zero, Zero, Zero, One];
+        assert_eq!(error_count(&seq, &ref_seq), 2);
+        // Shorter `seq`
+        let ref_seq = [One, Zero, Zero, One, One, One, Zero, Zero, Zero, One];
+        let seq = [One, One, Zero, Zero, One, One, Zero, Zero];
+        assert_eq!(error_count(&seq, &ref_seq), 2);
     }
 }
