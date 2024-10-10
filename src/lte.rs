@@ -1,8 +1,9 @@
 //! Simulator to evaluate performance of LTE rate-1/3 PCCC over BPSK-AWGN channel
 
+use rand::prelude::{Rng, ThreadRng};
 use serde::{Deserialize, Serialize};
 
-use crate::{DecodingAlgo, Error, Interleaver};
+use crate::{Bit, DecodingAlgo, Error, Interleaver};
 
 /// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
@@ -430,6 +431,19 @@ fn invalid_num_info_bits_message(num_info_bits: usize) -> String {
     format!("Number of information bits {num_info_bits} is not in Table 5.1.3-3 of 3GPP TS 36.212")
 }
 
+/// Returns given number of random bits.
+fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
+    (0 .. num_bits)
+        .map(|_| {
+            if rng.gen_bool(0.5) {
+                Bit::One
+            } else {
+                Bit::Zero
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests_of_simresults {
     use super::*;
@@ -545,6 +559,7 @@ mod tests_of_simresults {
 #[cfg(test)]
 mod tests_of_functions {
     use super::*;
+    use Bit::{One, Zero};
 
     #[test]
     fn test_interleaver() {
@@ -685,5 +700,19 @@ mod tests_of_functions {
             qpp_coefficients_4160_to_6144_bits(6144).unwrap(),
             (263, 480)
         );
+    }
+
+    #[test]
+    #[allow(clippy::cast_possible_truncation)]
+    fn test_random_bits() {
+        let mut rng = rand::thread_rng();
+        let num_bits = 0;
+        let bits: Vec<Bit> = random_bits(num_bits, &mut rng);
+        assert!(bits.is_empty());
+        let num_bits = 10000;
+        let bits = random_bits(num_bits, &mut rng);
+        let num_zeros = bits.iter().filter(|&b| *b == Zero).count();
+        let num_ones = bits.iter().filter(|&b| *b == One).count();
+        assert!(num_zeros > 9 * num_bits / 20 && num_ones > 9 * num_bits / 20);
     }
 }
