@@ -1,6 +1,7 @@
 //! Simulator to evaluate performance of LTE rate-1/3 PCCC over BPSK-AWGN channel
 
 use rand::prelude::{Rng, ThreadRng};
+use rand_distr::StandardNormal;
 use serde::{Deserialize, Serialize};
 
 use crate::{Bit, DecodingAlgo, Error, Interleaver};
@@ -444,6 +445,19 @@ fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
         .collect()
 }
 
+/// Returns LLR values at BPSK-AWGN channel output corresponding to given bits.
+fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64, rng: &mut ThreadRng) -> Vec<f64> {
+    let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
+    let noise_var = 0.5 / es_over_n0;
+    bits.iter()
+        .map(|b| match b {
+            Bit::Zero => 1f64,
+            Bit::One => -1f64,
+        })
+        .map(|x| 4.0 * es_over_n0 * (x + noise_var.sqrt() * rng.sample::<f64, _>(StandardNormal)))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests_of_simresults {
     use super::*;
@@ -714,5 +728,30 @@ mod tests_of_functions {
         let num_zeros = bits.iter().filter(|&b| *b == Zero).count();
         let num_ones = bits.iter().filter(|&b| *b == One).count();
         assert!(num_zeros > 9 * num_bits / 20 && num_ones > 9 * num_bits / 20);
+    }
+
+    #[test]
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_possible_truncation)]
+    fn test_bpsk_awgn_channel() {
+        let mut rng = rand::thread_rng();
+        let bits: Vec<Bit> = random_bits(0, &mut rng);
+        assert!(bpsk_awgn_channel(&bits, 0.0, &mut rng).is_empty());
+        let es_over_n0_db = 20f64;
+        let num_bits = 10000;
+        let bits: Vec<Bit> = random_bits(num_bits, &mut rng);
+        let bits_llr = bpsk_awgn_channel(&bits, es_over_n0_db, &mut rng);
+        let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
+        let noise_var_est = bits_llr
+            .iter()
+            .zip(bits)
+            .map(|(y, b)| match b {
+                Zero => y - 4.0 * es_over_n0,
+                One => y + 4.0 * es_over_n0,
+            })
+            .map(|x| x * x)
+            .sum::<f64>()
+            / f64::from(num_bits as u32);
+        assert!(noise_var_est > 7.2 * es_over_n0 && noise_var_est < 8.8 * es_over_n0);
     }
 }
