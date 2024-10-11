@@ -433,27 +433,27 @@ fn bcjr_inputs(
     sm: &rsc::StateMachine,
 ) -> (Vec<f64>, Vec<f64>) {
     let num_info_bits = interleaver.length;
-    let num_out_per_in = 2 * sm.num_output_bits - 1;
+    let inverse_code_rate = 2 * sm.num_output_bits - 1;
     let num_code_bits_per_rsc = (num_info_bits + sm.memory_len) * sm.num_output_bits;
     let mut top_code_bits_llr = Vec::with_capacity(num_code_bits_per_rsc);
     let mut bottom_code_bits_llr = Vec::with_capacity(num_code_bits_per_rsc);
     // Information bits
     for k in 0 .. num_info_bits {
-        let i_top = k * num_out_per_in;
+        let i_top = k * inverse_code_rate;
         top_code_bits_llr.extend_from_slice(&code_bits_llr[i_top .. i_top + sm.num_output_bits]);
-        let i_bottom = interleaver.all_in_index_given_out_index[k] * num_out_per_in;
+        let i_bottom = interleaver.all_in_index_given_out_index[k] * inverse_code_rate;
         bottom_code_bits_llr.push(code_bits_llr[i_bottom]);
         bottom_code_bits_llr.extend_from_slice(
-            &code_bits_llr[i_bottom + sm.num_output_bits .. i_bottom + num_out_per_in],
+            &code_bits_llr[i_bottom + sm.num_output_bits .. i_bottom + inverse_code_rate],
         );
     }
     // Tail bits
     top_code_bits_llr.extend_from_slice(
-        &code_bits_llr[num_info_bits * num_out_per_in
-            .. num_info_bits * num_out_per_in + sm.memory_len * sm.num_output_bits],
+        &code_bits_llr[num_info_bits * inverse_code_rate
+            .. num_info_bits * inverse_code_rate + sm.memory_len * sm.num_output_bits],
     );
     bottom_code_bits_llr.extend_from_slice(
-        &code_bits_llr[num_info_bits * num_out_per_in + sm.memory_len * sm.num_output_bits ..],
+        &code_bits_llr[num_info_bits * inverse_code_rate + sm.memory_len * sm.num_output_bits ..],
     );
     (top_code_bits_llr, bottom_code_bits_llr)
 }
