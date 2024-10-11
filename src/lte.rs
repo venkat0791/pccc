@@ -1,12 +1,13 @@
-//! Performance evaluation of the rate-1/3 LTE PCCC over a BPSK-AWGN channel
+//! Encoder and decoder for the rate-1/3 PCCC used in LTE
 //!
-//! The [`bpsk_awgn_sim`] function simulates the performance of this code over a BPSK-AWGN channel.
-//! The parameters of the simulation and the results from it are captured in the [`SimParams`] and
-//! [`SimResults`] structs, respectively.
+//! The encoder and decoder for the rate-1/3 LTE PCCC are implemented in [`encoder`] and
+//! [`decoder`], respectively. The [`bpsk_awgn_sim`] function simulates the performance of this
+//! code over a BPSK-AWGN channel. The parameters of the simulation and the results from it are
+//! captured in the [`SimParams`] and [`SimResults`] structs, respectively.
 //!
 //! # Examples
 //!
-//! This example shows how to evaluate the BER/BLER performance of the LTE rate-1/3 PCCC with a
+//! This example shows how to evaluate the BER/BLER performance of the rate-1/3 LTE PCCC with a
 //! block size of 40 information bits, over a BPSK-AWGN channel at an SNR (Es/N0) of -3 dB:
 //! ```
 //! use pccc::{lte, DecodingAlgo};
@@ -21,7 +22,7 @@
 //!     num_runs_min: 1,
 //!     num_runs_max: 2,
 //! };
-//! let results = lte::bpsk_awgn_sim(&params, &mut rng)?;
+//! let results: lte::SimResults = lte::bpsk_awgn_sim(&params, &mut rng)?;
 //! println!("BER = {}", results.info_bit_error_rate());
 //! println!("BLER = {}", results.block_error_rate());
 //! # Ok::<(), Box<dyn std::error::Error>>(())
