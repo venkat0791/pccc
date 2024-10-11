@@ -32,7 +32,10 @@ use rand::prelude::{Rng, ThreadRng};
 use rand_distr::StandardNormal;
 use serde::{Deserialize, Serialize};
 
-use crate::{decoder, Bit, DecodingAlgo, Error, Interleaver};
+use crate::{Bit, DecodingAlgo, Error, Interleaver};
+
+const INVERSE_CODE_RATE: usize = 3;
+const NUM_TAIL_CODE_BITS: usize = 12;
 
 /// Returns code bits from rate-1/3 LTE PCCC encoder for given information bits.
 ///
@@ -51,6 +54,38 @@ use crate::{decoder, Bit, DecodingAlgo, Error, Interleaver};
 pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
     let qpp_interleaver = interleaver(info_bits.len())?;
     crate::encoder(info_bits, &qpp_interleaver, &code_polynomials())
+}
+
+/// Returns information bit decisions from rate-1/3 LTE PCCC decoder for given code bit LLR values.
+///
+/// # Parameters
+///
+/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
+///
+/// - `decoding_algo`: Decoding algorithm to use, and associated number of turbo iterations.
+///
+/// # Returns
+///
+/// - `info_bits_hat`: Decisions on the information bits.
+///
+/// # Errors
+///
+/// Returns an error if `code_bits_llr.len()` does not correspond to one of the block sizes in
+/// Table 5.1.3-3 of 3GPP TS 36.212.
+pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec<Bit>, Error> {
+    if code_bits_llr.len() < NUM_TAIL_CODE_BITS {
+        return Err(Error::InvalidInput(format!(
+            "Must have a minimum of {NUM_TAIL_CODE_BITS} code bit LLR values",
+        )));
+    }
+    let num_info_bits = (code_bits_llr.len() - NUM_TAIL_CODE_BITS) / INVERSE_CODE_RATE;
+    let qpp_interleaver = interleaver(num_info_bits)?;
+    crate::decoder(
+        code_bits_llr,
+        &qpp_interleaver,
+        &code_polynomials(),
+        decoding_algo,
+    )
 }
 
 /// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
@@ -203,19 +238,12 @@ impl SimResults {
 /// ```
 pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResults, Error> {
     check_sim_params(params)?;
-    let code_polynomials = [0o13, 0o15];
-    let interleaver = interleaver(params.num_info_bits_per_block as usize)?;
     let mut results = SimResults::new(params);
     while !results.sim_complete() {
-        let info_bits = random_bits(interleaver.length, rng);
+        let info_bits = random_bits(params.num_info_bits_per_block as usize, rng);
         let code_bits = encoder(&info_bits)?;
         let code_bits_llr = bpsk_awgn_channel(&code_bits, params.es_over_n0_db, rng);
-        let info_bits_hat = decoder(
-            &code_bits_llr,
-            &interleaver,
-            &code_polynomials,
-            params.decoding_algo,
-        )?;
+        let info_bits_hat = decoder(&code_bits_llr, params.decoding_algo)?;
         let num_info_bit_errors_this_block = error_count(&info_bits_hat, &info_bits);
         results.update_after_block(num_info_bit_errors_this_block);
         results.print_progress_message();
@@ -702,6 +730,13 @@ mod tests_of_functions {
         let mut rng = rand::thread_rng();
         let info_bits = random_bits(40, &mut rng);
         assert!(encoder(&info_bits).is_ok());
+    }
+
+    #[test]
+    fn test_decoder() {
+        let mut rng = rand::thread_rng();
+        let code_bits_llr = bpsk_awgn_channel(&random_bits(132, &mut rng), 10.0, &mut rng);
+        assert!(decoder(&code_bits_llr, DecodingAlgo::LinearLogMAP(8)).is_ok());
     }
 
     #[test]
