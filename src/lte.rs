@@ -34,6 +34,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Bit, DecodingAlgo, Error, Interleaver};
 
+const CODE_POLYNOMIALS: [usize; 2] = [0o13, 0o15];
 const INVERSE_CODE_RATE: usize = 3;
 const NUM_TAIL_CODE_BITS: usize = 12;
 
@@ -165,7 +166,7 @@ impl SimResults {
 /// 3GPP TS 36.212.
 pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
     let qpp_interleaver = interleaver(info_bits.len())?;
-    crate::encoder(info_bits, &qpp_interleaver, &code_polynomials())
+    crate::encoder(info_bits, &qpp_interleaver, &CODE_POLYNOMIALS)
 }
 
 /// Returns information bit decisions from rate-1/3 LTE PCCC decoder for given code bit LLR values.
@@ -195,7 +196,7 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
     crate::decoder(
         code_bits_llr,
         &qpp_interleaver,
-        &code_polynomials(),
+        &CODE_POLYNOMIALS,
         decoding_algo,
     )
 }
@@ -265,11 +266,6 @@ fn check_sim_params(params: &SimParams) -> Result<(), Error> {
         )));
     }
     Ok(())
-}
-
-/// Returns polynomials for rate-1/3 PCCC in LTE.
-fn code_polynomials() -> [usize; 2] {
-    [0o13, 0o15]
 }
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
