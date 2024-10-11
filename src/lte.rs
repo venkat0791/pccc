@@ -32,7 +32,26 @@ use rand::prelude::{Rng, ThreadRng};
 use rand_distr::StandardNormal;
 use serde::{Deserialize, Serialize};
 
-use crate::{decoder, encoder, Bit, DecodingAlgo, Error, Interleaver};
+use crate::{decoder, Bit, DecodingAlgo, Error, Interleaver};
+
+/// Returns code bits from rate-1/3 LTE PCCC encoder for given information bits.
+///
+/// # Parameters
+///
+/// - `info_bits`: Information bits to be encoded.
+///
+/// # Returns
+///
+/// - `code_bits`: Code bits from the rate-1/3 LTE PCCC encoder.
+///
+/// # Errors
+///
+/// Returns an error if `info_bits.len()` is not one of the values specified in Table 5.1.3-3 of
+/// 3GPP TS 36.212.
+pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
+    let qpp_interleaver = interleaver(info_bits.len())?;
+    crate::encoder(info_bits, &qpp_interleaver, &code_polynomials())
+}
 
 /// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
@@ -189,7 +208,7 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
     let mut results = SimResults::new(params);
     while !results.sim_complete() {
         let info_bits = random_bits(interleaver.length, rng);
-        let code_bits = encoder(&info_bits, &interleaver, &code_polynomials)?;
+        let code_bits = encoder(&info_bits)?;
         let code_bits_llr = bpsk_awgn_channel(&code_bits, params.es_over_n0_db, rng);
         let info_bits_hat = decoder(
             &code_bits_llr,
@@ -678,6 +697,12 @@ mod tests_of_functions {
     use super::*;
     use Bit::{One, Zero};
 
+    #[test]
+    fn test_encoder() {
+        let mut rng = rand::thread_rng();
+        let info_bits = random_bits(40, &mut rng);
+        assert!(encoder(&info_bits).is_ok());
+    }
 
     #[test]
     fn test_bpsk_awgn_sim() {
