@@ -262,6 +262,11 @@ fn check_sim_params(params: &SimParams) -> Result<(), Error> {
     Ok(())
 }
 
+/// Returns polynomials for rate-1/3 PCCC in LTE.
+fn code_polynomials() -> [usize; 2] {
+    [0o13, 0o15]
+}
+
 /// Returns QPP coefficients for `40 <= num_info_bits <= 128`.
 fn qpp_coefficients_40_to_128_bits(num_info_bits: usize) -> Result<(usize, usize), Error> {
     match num_info_bits {
