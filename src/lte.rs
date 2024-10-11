@@ -1,4 +1,32 @@
-//! Simulator to evaluate performance of LTE rate-1/3 PCCC over BPSK-AWGN channel
+//! Performance evaluation of the rate-1/3 LTE PCCC over a BPSK-AWGN channel
+//!
+//! The [`bpsk_awgn_sim`] function simulates the performance of this code over a BPSK-AWGN channel.
+//! The parameters of the simulation and the results from it are captured in the [`SimParams`] and
+//! [`SimResults`] structs, respectively. The [`interleaver`] function returns the LTE internal
+//! interleaver for each of the supported block sizes.
+//!
+//! # Examples
+//!
+//! This example shows how to evaluate the BER/BLER performance of the LTE rate-1/3 PCCC with a
+//! block size of 40 information bits, over a BPSK-AWGN channel at an SNR (Es/N0) of -3 dB:
+//! ```
+//! use pccc::{lte, DecodingAlgo};
+//!
+//! let mut rng = rand::thread_rng();
+//! let params = lte::SimParams {
+//!     num_info_bits_per_block: 40,
+//!     es_over_n0_db: -3.0,
+//!     decoding_algo: DecodingAlgo::LinearLogMAP(8),
+//!     num_block_errors_min: 10,
+//!     num_blocks_per_run: 10,
+//!     num_runs_min: 1,
+//!     num_runs_max: 2,
+//! };
+//! let results = lte::bpsk_awgn_sim(&params, &mut rng)?;
+//! println!("BER = {}", results.info_bit_error_rate());
+//! println!("BLER = {}", results.block_error_rate());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 use rand::prelude::{Rng, ThreadRng};
 use rand_distr::StandardNormal;
