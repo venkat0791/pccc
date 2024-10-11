@@ -2,8 +2,7 @@
 //!
 //! The [`bpsk_awgn_sim`] function simulates the performance of this code over a BPSK-AWGN channel.
 //! The parameters of the simulation and the results from it are captured in the [`SimParams`] and
-//! [`SimResults`] structs, respectively. The [`interleaver`] function returns the LTE internal
-//! interleaver for each of the supported block sizes.
+//! [`SimResults`] structs, respectively.
 //!
 //! # Examples
 //!
@@ -261,17 +260,7 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
 /// # Errors
 ///
 /// Returns an error if `num_info_bits` is invalid.
-///
-/// # Examples
-///
-/// ```
-/// use pccc::lte;
-///
-/// let num_info_bits = 40;
-/// let interleaver = lte::interleaver(num_info_bits)?;
-/// # Ok::<(), Box<dyn std::error::Error>>(())
-/// ```
-pub fn interleaver(num_info_bits: usize) -> Result<Interleaver, Error> {
+fn interleaver(num_info_bits: usize) -> Result<Interleaver, Error> {
     let (coeff1, coeff2) = if num_info_bits <= 128 {
         qpp_coefficients_40_to_128_bits(num_info_bits)?
     } else if num_info_bits <= 256 {
