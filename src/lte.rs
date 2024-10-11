@@ -37,57 +37,6 @@ use crate::{Bit, DecodingAlgo, Error, Interleaver};
 const INVERSE_CODE_RATE: usize = 3;
 const NUM_TAIL_CODE_BITS: usize = 12;
 
-/// Returns code bits from rate-1/3 LTE PCCC encoder for given information bits.
-///
-/// # Parameters
-///
-/// - `info_bits`: Information bits to be encoded.
-///
-/// # Returns
-///
-/// - `code_bits`: Code bits from the rate-1/3 LTE PCCC encoder.
-///
-/// # Errors
-///
-/// Returns an error if `info_bits.len()` is not one of the values specified in Table 5.1.3-3 of
-/// 3GPP TS 36.212.
-pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
-    let qpp_interleaver = interleaver(info_bits.len())?;
-    crate::encoder(info_bits, &qpp_interleaver, &code_polynomials())
-}
-
-/// Returns information bit decisions from rate-1/3 LTE PCCC decoder for given code bit LLR values.
-///
-/// # Parameters
-///
-/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
-///
-/// - `decoding_algo`: Decoding algorithm to use, and associated number of turbo iterations.
-///
-/// # Returns
-///
-/// - `info_bits_hat`: Decisions on the information bits.
-///
-/// # Errors
-///
-/// Returns an error if `code_bits_llr.len()` does not correspond to one of the block sizes in
-/// Table 5.1.3-3 of 3GPP TS 36.212.
-pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec<Bit>, Error> {
-    if code_bits_llr.len() < NUM_TAIL_CODE_BITS {
-        return Err(Error::InvalidInput(format!(
-            "Must have a minimum of {NUM_TAIL_CODE_BITS} code bit LLR values",
-        )));
-    }
-    let num_info_bits = (code_bits_llr.len() - NUM_TAIL_CODE_BITS) / INVERSE_CODE_RATE;
-    let qpp_interleaver = interleaver(num_info_bits)?;
-    crate::decoder(
-        code_bits_llr,
-        &qpp_interleaver,
-        &code_polynomials(),
-        decoding_algo,
-    )
-}
-
 /// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
 pub struct SimParams {
@@ -200,6 +149,57 @@ impl SimResults {
     }
 }
 
+/// Returns code bits from rate-1/3 LTE PCCC encoder for given information bits.
+///
+/// # Parameters
+///
+/// - `info_bits`: Information bits to be encoded.
+///
+/// # Returns
+///
+/// - `code_bits`: Code bits from the rate-1/3 LTE PCCC encoder.
+///
+/// # Errors
+///
+/// Returns an error if `info_bits.len()` is not one of the values specified in Table 5.1.3-3 of
+/// 3GPP TS 36.212.
+pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
+    let qpp_interleaver = interleaver(info_bits.len())?;
+    crate::encoder(info_bits, &qpp_interleaver, &code_polynomials())
+}
+
+/// Returns information bit decisions from rate-1/3 LTE PCCC decoder for given code bit LLR values.
+///
+/// # Parameters
+///
+/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
+///
+/// - `decoding_algo`: Decoding algorithm to use, and associated number of turbo iterations.
+///
+/// # Returns
+///
+/// - `info_bits_hat`: Decisions on the information bits.
+///
+/// # Errors
+///
+/// Returns an error if `code_bits_llr.len()` does not correspond to one of the block sizes in
+/// Table 5.1.3-3 of 3GPP TS 36.212.
+pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec<Bit>, Error> {
+    if code_bits_llr.len() < NUM_TAIL_CODE_BITS {
+        return Err(Error::InvalidInput(format!(
+            "Must have a minimum of {NUM_TAIL_CODE_BITS} code bit LLR values",
+        )));
+    }
+    let num_info_bits = (code_bits_llr.len() - NUM_TAIL_CODE_BITS) / INVERSE_CODE_RATE;
+    let qpp_interleaver = interleaver(num_info_bits)?;
+    crate::decoder(
+        code_bits_llr,
+        &qpp_interleaver,
+        &code_polynomials(),
+        decoding_algo,
+    )
+}
+
 /// Runs simulation of LTE rate-1/3 PCCC over BPSK-AWGN channel.
 ///
 /// # Parameters
@@ -251,6 +251,27 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
     Ok(results)
 }
 
+/// Checks validity of simulation parameters.
+fn check_sim_params(params: &SimParams) -> Result<(), Error> {
+    if params.num_blocks_per_run == 0 {
+        return Err(Error::InvalidInput(
+            "Number of blocks per run cannot be zero".to_string(),
+        ));
+    }
+    if params.num_runs_min > params.num_runs_max {
+        return Err(Error::InvalidInput(format!(
+            "Minimum number of runs ({}) exceeds maximum number of runs ({})",
+            params.num_runs_min, params.num_runs_max
+        )));
+    }
+    Ok(())
+}
+
+/// Returns polynomials for rate-1/3 PCCC in LTE.
+fn code_polynomials() -> [usize; 2] {
+    [0o13, 0o15]
+}
+
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
 ///
 /// # Parameters
@@ -281,27 +302,6 @@ fn interleaver(num_info_bits: usize) -> Result<Interleaver, Error> {
         .map(|out_index| ((coeff1 + coeff2 * out_index) * out_index) % num_info_bits)
         .collect();
     Interleaver::new(&perm)
-}
-
-/// Checks validity of simulation parameters.
-fn check_sim_params(params: &SimParams) -> Result<(), Error> {
-    if params.num_blocks_per_run == 0 {
-        return Err(Error::InvalidInput(
-            "Number of blocks per run cannot be zero".to_string(),
-        ));
-    }
-    if params.num_runs_min > params.num_runs_max {
-        return Err(Error::InvalidInput(format!(
-            "Minimum number of runs ({}) exceeds maximum number of runs ({})",
-            params.num_runs_min, params.num_runs_max
-        )));
-    }
-    Ok(())
-}
-
-/// Returns polynomials for rate-1/3 PCCC in LTE.
-fn code_polynomials() -> [usize; 2] {
-    [0o13, 0o15]
 }
 
 /// Returns QPP coefficients for `40 <= num_info_bits <= 128`.
@@ -757,31 +757,6 @@ mod tests_of_functions {
     }
 
     #[test]
-    fn test_interleaver() {
-        // Invalid input
-        assert!(interleaver(32).is_err());
-        // Valid input
-        for num in 0 .. 60 {
-            let num_info_bits = 40 + 8 * num;
-            assert!(interleaver(num_info_bits).is_ok());
-        }
-        for num in 0 .. 32 {
-            let num_info_bits = 528 + 16 * num;
-            assert!(interleaver(num_info_bits).is_ok());
-        }
-        for num in 0 .. 32 {
-            let num_info_bits = 1056 + 32 * num;
-            assert!(interleaver(num_info_bits).is_ok());
-        }
-        for num in 0 .. 64 {
-            let num_info_bits = 2112 + 64 * num;
-            assert!(interleaver(num_info_bits).is_ok());
-        }
-        // Invalid input
-        assert!(interleaver(6208).is_err());
-    }
-
-    #[test]
     fn test_check_sim_params() {
         // Invalid input
         let params = SimParams {
@@ -815,6 +790,31 @@ mod tests_of_functions {
             num_runs_max: 2,
         };
         assert!(check_sim_params(&params).is_ok());
+    }
+
+    #[test]
+    fn test_interleaver() {
+        // Invalid input
+        assert!(interleaver(32).is_err());
+        // Valid input
+        for num in 0 .. 60 {
+            let num_info_bits = 40 + 8 * num;
+            assert!(interleaver(num_info_bits).is_ok());
+        }
+        for num in 0 .. 32 {
+            let num_info_bits = 528 + 16 * num;
+            assert!(interleaver(num_info_bits).is_ok());
+        }
+        for num in 0 .. 32 {
+            let num_info_bits = 1056 + 32 * num;
+            assert!(interleaver(num_info_bits).is_ok());
+        }
+        for num in 0 .. 64 {
+            let num_info_bits = 2112 + 64 * num;
+            assert!(interleaver(num_info_bits).is_ok());
+        }
+        // Invalid input
+        assert!(interleaver(6208).is_err());
     }
 
     #[test]
