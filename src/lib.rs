@@ -598,16 +598,17 @@ mod tests_of_functions {
         // Valid inputs
         let info_bits = [Zero, One, One, Zero];
         let code_bits = encoder(&info_bits, &interleaver, &code_polynomials).unwrap();
-        let correct_code_bits = [
-            Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero, Zero,
-            One, One, One, One, One, Zero, One, One, One,
-        ];
-        assert_eq!(code_bits, correct_code_bits);
+        assert_eq!(
+            code_bits,
+            [
+                Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero,
+                Zero, One, One, One, One, One, Zero, One, One, One,
+            ]
+        );
     }
 
     #[test]
     fn test_decoder() {
-        let decoding_algo = DecodingAlgo::LinearLogMAP(8);
         let code_polynomials = [0o13, 0o15];
         let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
         // Invalid inputs
@@ -616,7 +617,7 @@ mod tests_of_functions {
             &code_bits_llr,
             &interleaver,
             &code_polynomials,
-            decoding_algo
+            DecodingAlgo::LinearLogMAP(8),
         )
         .is_err());
         // Valid inputs
@@ -628,7 +629,7 @@ mod tests_of_functions {
             &code_bits_llr,
             &interleaver,
             &code_polynomials,
-            decoding_algo,
+            DecodingAlgo::LinearLogMAP(8),
         )
         .unwrap();
         assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
