@@ -978,6 +978,32 @@ mod tests_of_functions {
         assert!(bpsk_awgn_sim(&params, &mut rng).is_ok());
     }
 
+    #[test]
+    fn test_run_bpsk_awgn_sims() {
+        let mut rng = rand::thread_rng();
+        let all_params = vec![
+            SimParams {
+                num_info_bits_per_block: 32,
+                es_over_n0_db: -3.0,
+                decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                num_block_errors_min: 20,
+                num_blocks_per_run: 10,
+                num_runs_min: 1,
+                num_runs_max: 2,
+            },
+            SimParams {
+                num_info_bits_per_block: 40,
+                es_over_n0_db: -3.0,
+                decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                num_block_errors_min: 10,
+                num_blocks_per_run: 10,
+                num_runs_min: 1,
+                num_runs_max: 2,
+            },
+        ];
+        run_bpsk_awgn_sims(&all_params, &mut rng, "results.json").unwrap();
+    }
+
     fn all_sim_params_for_test() -> Vec<SimParams> {
         let mut all_params = Vec::new();
         for num_info_bits_per_block in [40, 48] {
@@ -994,13 +1020,6 @@ mod tests_of_functions {
             }
         }
         all_params
-    }
-
-    #[test]
-    fn test_run_bpsk_awgn_sims() {
-        let mut rng = rand::thread_rng();
-        let all_params = all_sim_params_for_test();
-        run_bpsk_awgn_sims(&all_params, &mut rng, "results.json").unwrap();
     }
 
     fn all_sim_results_for_test(all_params: &[SimParams]) -> Vec<SimResults> {
