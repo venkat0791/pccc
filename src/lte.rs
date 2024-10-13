@@ -402,8 +402,7 @@ pub fn save_all_sim_results_to_file(
     all_results: &[SimResults],
     json_filename: &str,
 ) -> Result<(), Error> {
-    let json_file = File::create(json_filename)?;
-    let writer = BufWriter::new(json_file);
+    let writer = BufWriter::new(File::create(json_filename)?);
     serde_json::to_writer_pretty(writer, all_results)?;
     Ok(())
 }
