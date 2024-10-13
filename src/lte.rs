@@ -32,6 +32,7 @@ use rand::prelude::{Rng, ThreadRng};
 use rand_distr::StandardNormal;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
+use std::io::BufReader;
 use std::io::BufWriter;
 
 use crate::{Bit, DecodingAlgo, Error, Interleaver};
@@ -357,7 +358,17 @@ pub fn run_bpsk_awgn_sims(
 }
 
 /// Saves all simulation results to JSON file.
-fn save_all_sim_results_to_file(
+///
+/// # Parameters
+///
+/// - `all_results`: All simulation results to be saved.
+///
+/// - `json_filename`: Name of the JSON file to which all simulation results must be written.
+///
+/// # Errors
+///
+/// Returns an error if creating or writing to the JSON file fails.
+pub fn save_all_sim_results_to_file(
     all_results: &[SimResults],
     json_filename: &str,
 ) -> Result<(), Error> {
@@ -365,6 +376,21 @@ fn save_all_sim_results_to_file(
     let writer = BufWriter::new(json_file);
     serde_json::to_writer_pretty(writer, all_results)?;
     Ok(())
+}
+
+/// Returns all simulation results from JSON file.
+///
+/// # Parameters
+///
+/// - `json_filename`: Name of the JSON file from which all simulation results must be read.
+///
+/// # Errors
+///
+/// Returns an error if opening or reading from the JSON file fails.
+pub fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
+    let reader = BufReader::new(File::open(json_filename)?);
+    let all_results = serde_json::from_reader(reader)?;
+    Ok(all_results)
 }
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
@@ -862,7 +888,6 @@ mod tests_of_simresults {
 
 #[cfg(test)]
 mod tests_of_functions {
-    use std::io::BufReader;
 
     use super::*;
     use Bit::{One, Zero};
@@ -941,18 +966,21 @@ mod tests_of_functions {
         all_results
     }
 
-    fn all_sim_results_from_file(json_filename: &str) -> Vec<SimResults> {
-        let reader = BufReader::new(File::open(json_filename).unwrap());
-        serde_json::from_reader(reader).unwrap()
+    #[test]
+    fn test_save_all_sim_results_to_file() {
+        let all_results = all_sim_results_for_test(&all_sim_params_for_test());
+        let json_filename = "results.json";
+        save_all_sim_results_to_file(&all_results, json_filename).unwrap();
+        let all_results_saved = all_sim_results_from_file(json_filename).unwrap();
+        assert_eq!(all_results, all_results_saved);
     }
 
     #[test]
-    fn test_save_all_sim_results_to_file() {
-        let all_params = all_sim_params_for_test();
-        let all_results = all_sim_results_for_test(&all_params);
-        let filename = "results.json";
-        save_all_sim_results_to_file(&all_results, filename).unwrap();
-        let all_results_saved = all_sim_results_from_file(filename);
+    fn test_all_sim_results_from_file() {
+        let all_results = all_sim_results_for_test(&all_sim_params_for_test());
+        let json_filename = "results.json";
+        save_all_sim_results_to_file(&all_results, json_filename).unwrap();
+        let all_results_saved = all_sim_results_from_file(json_filename).unwrap();
         assert_eq!(all_results, all_results_saved);
     }
 
