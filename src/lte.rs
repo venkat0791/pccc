@@ -357,6 +357,8 @@ pub fn run_bpsk_awgn_sims(
         params.print();
         if let Ok(results) = bpsk_awgn_sim(params, rng) {
             all_results.push(results);
+        } else {
+            eprintln!("WARNING: Invalid simulation parameters");
         }
     }
     save_all_sim_results_to_file(&all_results, json_filename)?;
