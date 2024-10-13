@@ -63,6 +63,12 @@ pub struct SimParams {
 impl SimParams {
     /// Checks validity of simulation parameters.
     fn check(&self) -> Result<(), Error> {
+        if qpp_coefficients(self.num_info_bits_per_block as usize).is_err() {
+            return Err(Error::InvalidInput(format!(
+                "{} is not a valid number of information bits per block",
+                self.num_info_bits_per_block,
+            )));
+        }
         if self.num_blocks_per_run == 0 {
             return Err(Error::InvalidInput(
                 "Number of blocks per run cannot be zero".to_string(),
@@ -71,7 +77,7 @@ impl SimParams {
         if self.num_runs_min > self.num_runs_max {
             return Err(Error::InvalidInput(format!(
                 "Minimum number of runs ({}) exceeds maximum number of runs ({})",
-                self.num_runs_min, self.num_runs_max
+                self.num_runs_min, self.num_runs_max,
             )));
         }
         Ok(())
@@ -731,6 +737,16 @@ mod tests_of_simparams {
     #[test]
     fn test_check() {
         // Invalid input
+        let params = SimParams {
+            num_info_bits_per_block: 32,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 10,
+            num_blocks_per_run: 1,
+            num_runs_min: 1,
+            num_runs_max: 2,
+        };
+        assert!(params.check().is_err());
         let params = SimParams {
             num_info_bits_per_block: 40,
             es_over_n0_db: -3.0,
