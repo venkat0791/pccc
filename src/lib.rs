@@ -60,6 +60,8 @@
     unused_qualifications
 )]
 
+use std::io;
+
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -73,6 +75,12 @@ pub enum Error {
     /// Invalid input error
     #[error("{0}")]
     InvalidInput(String),
+    /// File creation error
+    #[error("{0}")]
+    FileCreationError(#[from] io::Error),
+    /// Serde write error
+    #[error("{0}")]
+    SerdeWriteError(#[from] serde_json::Error),
     /// Unknown error
     #[error("Unknown error")]
     Unknown,

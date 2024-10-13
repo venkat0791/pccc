@@ -31,6 +31,8 @@
 use rand::prelude::{Rng, ThreadRng};
 use rand_distr::StandardNormal;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::BufWriter;
 
 use crate::{Bit, DecodingAlgo, Error, Interleaver};
 
@@ -324,6 +326,46 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
     Ok(results)
 }
 
+/// Runs simulations of rate-1/3 LTE PCCC over BPSK-AWGN channel and saves results to JSON file.
+///
+/// # Parameters
+///
+/// - `all_params`: Parameters for each simulation scenario of interest.
+///
+/// -  `rng`: Random number generator for the simulations.
+///
+/// - `json_filename`: Name of the JSON file to which all simulation results must be written.
+///
+/// # Errors
+///
+/// Returns an error if any invalid simulation parameters are encountered, or if there is an error
+/// in creating or writing to the JSON file for the simulation results.
+pub fn run_bpsk_awgn_sims(
+    all_params: &[SimParams],
+    rng: &mut ThreadRng,
+    json_filename: &str,
+) -> Result<(), Error> {
+    let mut all_results = Vec::with_capacity(all_params.len());
+    for params in all_params {
+        params.print();
+        if let Ok(results) = bpsk_awgn_sim(params, rng) {
+            all_results.push(results);
+        }
+    }
+    save_all_sim_results_to_file(&all_results, json_filename)?;
+    Ok(())
+}
+
+/// Saves all simulation results to JSON file.
+fn save_all_sim_results_to_file(
+    all_results: &[SimResults],
+    json_filename: &str,
+) -> Result<(), Error> {
+    let json_file = File::create(json_filename)?;
+    let writer = BufWriter::new(json_file);
+    serde_json::to_writer_pretty(writer, all_results)?;
+    Ok(())
+}
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
 ///
@@ -820,6 +862,8 @@ mod tests_of_simresults {
 
 #[cfg(test)]
 mod tests_of_functions {
+    use std::io::BufReader;
+
     use super::*;
     use Bit::{One, Zero};
 
@@ -864,6 +908,53 @@ mod tests_of_functions {
         assert!(bpsk_awgn_sim(&params, &mut rng).is_ok());
     }
 
+    fn all_sim_params_for_test() -> Vec<SimParams> {
+        let mut all_params = Vec::new();
+        for num_info_bits_per_block in [40, 48] {
+            for es_over_n0_db in [-3.5, -3.0] {
+                all_params.push(SimParams {
+                    num_info_bits_per_block,
+                    es_over_n0_db,
+                    decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                    num_block_errors_min: 20,
+                    num_blocks_per_run: 10,
+                    num_runs_min: 1,
+                    num_runs_max: 10,
+                });
+            }
+        }
+        all_params
+    }
+
+    #[test]
+    fn test_run_bpsk_awgn_sims() {
+        let mut rng = rand::thread_rng();
+        let all_params = all_sim_params_for_test();
+        run_bpsk_awgn_sims(&all_params, &mut rng, "results.json").unwrap();
+    }
+
+    fn all_sim_results_for_test(all_params: &[SimParams]) -> Vec<SimResults> {
+        let mut all_results = Vec::with_capacity(all_params.len());
+        for params in all_params {
+            all_results.push(SimResults::new(params));
+        }
+        all_results
+    }
+
+    fn all_sim_results_from_file(json_filename: &str) -> Vec<SimResults> {
+        let reader = BufReader::new(File::open(json_filename).unwrap());
+        serde_json::from_reader(reader).unwrap()
+    }
+
+    #[test]
+    fn test_save_all_sim_results_to_file() {
+        let all_params = all_sim_params_for_test();
+        let all_results = all_sim_results_for_test(&all_params);
+        let filename = "results.json";
+        save_all_sim_results_to_file(&all_results, filename).unwrap();
+        let all_results_saved = all_sim_results_from_file(filename);
+        assert_eq!(all_results, all_results_saved);
+    }
 
     #[test]
     fn test_interleaver() {
