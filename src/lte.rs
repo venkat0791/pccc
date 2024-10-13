@@ -57,6 +57,62 @@ pub struct SimParams {
     pub num_runs_max: u32,
 }
 
+impl SimParams {
+    /// Prints simulation parameters.
+    fn print(&self) {
+        eprintln!();
+        self.print_num_info_bits_per_block();
+        self.print_es_over_n0_db();
+        self.print_decoding_algo();
+        self.print_num_block_errors_min();
+        self.print_num_blocks_per_run();
+        self.print_num_runs_min();
+        self.print_num_runs_max();
+    }
+
+    /// Prints information block size.
+    fn print_num_info_bits_per_block(&self) {
+        eprintln!(
+            "{:?} information bits per block",
+            self.num_info_bits_per_block,
+        );
+    }
+
+    /// Prints Es/N0 (dB) value.
+    fn print_es_over_n0_db(&self) {
+        eprintln!("Es/N0 of {} dB", self.es_over_n0_db);
+    }
+
+    /// Prints decoding algorithm to use.
+    fn print_decoding_algo(&self) {
+        match self.decoding_algo {
+            DecodingAlgo::MaxLogMAP(n) => eprintln!("Max-Log-MAP decoding, {n} iterations"),
+            DecodingAlgo::LinearLogMAP(n) => eprintln!("Linear-Log-MAP decoding, {n} iterations"),
+            DecodingAlgo::LogMAP(n) => eprintln!("Log-MAP decoding, {n} iterations"),
+        };
+    }
+
+    /// Prints desired minimum number of block errors.
+    fn print_num_block_errors_min(&self) {
+        eprintln!("Minimum of {} block errors", self.num_block_errors_min);
+    }
+
+    /// Prints number of blocks to be transmitted per run.
+    fn print_num_blocks_per_run(&self) {
+        eprintln!("{} blocks per run", self.num_blocks_per_run);
+    }
+
+    /// Prints minimum number of runs of blocks to be simulated.
+    fn print_num_runs_min(&self) {
+        eprintln!("Minimum of {} runs", self.num_runs_min);
+    }
+
+    /// Prints maximum number of runs of blocks to be simulated.
+    fn print_num_runs_max(&self) {
+        eprintln!("Maximum of {} runs", self.num_runs_max);
+    }
+}
+
 /// Results from parallel-concatenated convolutional code simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
 pub struct SimResults {
@@ -592,6 +648,25 @@ fn error_count<T: PartialEq>(seq: &[T], ref_seq: &[T]) -> u32 {
             .count(),
     )
     .expect("Number of errors must be within range of `u32` type")
+}
+
+#[cfg(test)]
+mod tests_of_simparams {
+    use super::*;
+
+    #[test]
+    fn test_print() {
+        let params = SimParams {
+            num_info_bits_per_block: 40,
+            es_over_n0_db: -3.0,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            num_block_errors_min: 100,
+            num_blocks_per_run: 1000,
+            num_runs_min: 1,
+            num_runs_max: 10,
+        };
+        params.print();
+    }
 }
 
 #[cfg(test)]
