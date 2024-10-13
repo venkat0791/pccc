@@ -131,7 +131,7 @@ pub struct SimResults {
 impl SimResults {
     /// Returns initialized simulation results.
     #[must_use]
-    pub fn new(params: &SimParams) -> Self {
+    fn new(params: &SimParams) -> Self {
         Self {
             params: *params,
             num_blocks: 0,
@@ -162,7 +162,7 @@ impl SimResults {
     }
 
     /// Prints progress message.
-    pub fn print_progress_message(&self) {
+    fn print_progress_message(&self) {
         if self.run_complete() {
             eprint!(
                 "\r{:5} bits/block, Es/N0 = {:6.3} dB: \
