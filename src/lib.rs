@@ -75,12 +75,12 @@ pub enum Error {
     /// Invalid input error
     #[error("{0}")]
     InvalidInput(String),
-    /// File creation error
+    /// File read/write error
     #[error("{0}")]
-    FileCreationError(#[from] io::Error),
-    /// Serde write error
+    FileReadWriteError(#[from] io::Error),
+    /// Serde read/write error
     #[error("{0}")]
-    SerdeWriteError(#[from] serde_json::Error),
+    SerdeReadWriteError(#[from] serde_json::Error),
     /// Unknown error
     #[error("Unknown error")]
     Unknown,
