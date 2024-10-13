@@ -1,14 +1,14 @@
 //! Encoder and decoder for the rate-1/3 PCCC used in LTE
 //!
-//! The encoder and decoder for the rate-1/3 LTE PCCC are implemented in [`encoder`] and
-//! [`decoder`], respectively. The [`bpsk_awgn_sim`] function simulates the performance of this
-//! code over a BPSK-AWGN channel. The parameters of the simulation and the results from it are
-//! captured in the [`SimParams`] and [`SimResults`] structs, respectively.
+//! The encoder and decoder for the LTE PCCC are implemented in [`encoder`] and [`decoder`],
+//! respectively. The [`bpsk_awgn_sim`] function simulates the performance of this code over a
+//! BPSK-AWGN channel. The parameters of the simulation and the results from it are captured in the
+//! [`SimParams`] and [`SimResults`] structs, respectively.
 //!
 //! # Examples
 //!
-//! This example shows how to evaluate the BER/BLER performance of the rate-1/3 LTE PCCC with a
-//! block size of 40 information bits, over a BPSK-AWGN channel at an SNR (Es/N0) of -3 dB:
+//! This example shows how to evaluate the BER/BLER performance of the LTE PCCC with a block size
+//! of 40 information bits, over a BPSK-AWGN channel at an SNR (Es/N0) of -3 dB:
 //! ```
 //! use pccc::{lte, DecodingAlgo};
 //!
@@ -41,7 +41,7 @@ const CODE_POLYNOMIALS: [usize; 2] = [0o13, 0o15];
 const INVERSE_CODE_RATE: usize = 3;
 const NUM_TAIL_CODE_BITS: usize = 12;
 
-/// Parameters for parallel-concatenated convolutional code simulation over BPSK-AWGN channel
+/// Parameters for LTE PCCC simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
 pub struct SimParams {
     /// Number of information bits per block
@@ -138,7 +138,7 @@ impl SimParams {
     }
 }
 
-/// Results from parallel-concatenated convolutional code simulation over BPSK-AWGN channel
+/// Results from LTE PCCC simulation over BPSK-AWGN channel
 #[derive(Clone, PartialEq, Debug, Copy, Deserialize, Serialize)]
 pub struct SimResults {
     /// Simulation parameters
@@ -239,7 +239,7 @@ impl SimResults {
 ///
 /// # Returns
 ///
-/// - `code_bits`: Code bits from the rate-1/3 LTE PCCC encoder.
+/// - `code_bits`: Code bits from the encoder.
 ///
 /// # Errors
 ///
@@ -260,7 +260,7 @@ pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
 ///
 /// # Returns
 ///
-/// - `info_bits_hat`: Decisions on the information bits.
+/// - `info_bits_hat`: Information bit decisions from the decoder.
 ///
 /// # Errors
 ///
@@ -282,7 +282,7 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
     )
 }
 
-/// Runs simulation of LTE rate-1/3 PCCC over BPSK-AWGN channel.
+/// Runs simulation of rate-1/3 LTE PCCC over a BPSK-AWGN channel.
 ///
 /// # Parameters
 ///
@@ -307,7 +307,7 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
 ///
 /// let mut rng = rand::thread_rng();
 /// let params = lte::SimParams {
-///     num_info_bits_per_block: 48,
+///     num_info_bits_per_block: 40,
 ///     es_over_n0_db: -3.0,
 ///     decoding_algo: DecodingAlgo::LinearLogMAP(8),
 ///     num_block_errors_min: 10,
@@ -347,6 +347,28 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
 ///
 /// Returns an error if any invalid simulation parameters are encountered, or if there is an error
 /// in creating or writing to the JSON file for the simulation results.
+///
+/// # Examples
+///
+/// ```
+/// use pccc::{lte, DecodingAlgo};
+///
+/// let mut rng = rand::thread_rng();
+/// let mut all_params = Vec::new();
+/// for num_info_bits_per_block in [40, 48] {
+///     all_params.push(lte::SimParams {
+///         num_info_bits_per_block,
+///         es_over_n0_db: -3.0,
+///         decoding_algo: DecodingAlgo::LinearLogMAP(8),
+///         num_block_errors_min: 20,
+///         num_blocks_per_run: 10,
+///         num_runs_min: 1,
+///         num_runs_max: 10,
+///     });
+/// }
+/// lte::run_bpsk_awgn_sims(&all_params, &mut rng, "results.json")?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 pub fn run_bpsk_awgn_sims(
     all_params: &[SimParams],
     rng: &mut ThreadRng,
@@ -365,7 +387,7 @@ pub fn run_bpsk_awgn_sims(
     Ok(())
 }
 
-/// Saves all simulation results to JSON file.
+/// Saves all simulation results to a JSON file.
 ///
 /// # Parameters
 ///
@@ -386,7 +408,7 @@ pub fn save_all_sim_results_to_file(
     Ok(())
 }
 
-/// Returns all simulation results from JSON file.
+/// Returns all simulation results from a JSON file.
 ///
 /// # Parameters
 ///
@@ -945,7 +967,7 @@ mod tests_of_functions {
         assert!(bpsk_awgn_sim(&params, &mut rng).is_err());
         // Valid input
         let params = SimParams {
-            num_info_bits_per_block: 48,
+            num_info_bits_per_block: 40,
             es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
             num_block_errors_min: 10,
