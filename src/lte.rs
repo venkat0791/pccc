@@ -404,25 +404,30 @@ pub fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>,
 ///
 /// Returns an error if `num_info_bits` is invalid.
 fn interleaver(num_info_bits: usize) -> Result<Interleaver, Error> {
-    let (coeff1, coeff2) = if num_info_bits <= 128 {
-        qpp_coefficients_40_to_128_bits(num_info_bits)?
-    } else if num_info_bits <= 256 {
-        qpp_coefficients_136_to_256_bits(num_info_bits)?
-    } else if num_info_bits <= 512 {
-        qpp_coefficients_264_to_512_bits(num_info_bits)?
-    } else if num_info_bits <= 1024 {
-        qpp_coefficients_528_to_1024_bits(num_info_bits)?
-    } else if num_info_bits <= 2048 {
-        qpp_coefficients_1056_to_2048_bits(num_info_bits)?
-    } else if num_info_bits <= 4096 {
-        qpp_coefficients_2112_to_4096_bits(num_info_bits)?
-    } else {
-        qpp_coefficients_4160_to_6144_bits(num_info_bits)?
-    };
+    let (coeff1, coeff2) = qpp_coefficients(num_info_bits)?;
     let perm: Vec<usize> = (0 .. num_info_bits)
         .map(|out_index| ((coeff1 + coeff2 * out_index) * out_index) % num_info_bits)
         .collect();
     Interleaver::new(&perm)
+}
+
+/// Returns QPP coefficients for given number of information bits.
+fn qpp_coefficients(num_info_bits: usize) -> Result<(usize, usize), Error> {
+    if num_info_bits <= 128 {
+        qpp_coefficients_40_to_128_bits(num_info_bits)
+    } else if num_info_bits <= 256 {
+        qpp_coefficients_136_to_256_bits(num_info_bits)
+    } else if num_info_bits <= 512 {
+        qpp_coefficients_264_to_512_bits(num_info_bits)
+    } else if num_info_bits <= 1024 {
+        qpp_coefficients_528_to_1024_bits(num_info_bits)
+    } else if num_info_bits <= 2048 {
+        qpp_coefficients_1056_to_2048_bits(num_info_bits)
+    } else if num_info_bits <= 4096 {
+        qpp_coefficients_2112_to_4096_bits(num_info_bits)
+    } else {
+        qpp_coefficients_4160_to_6144_bits(num_info_bits)
+    }
 }
 
 /// Returns QPP coefficients for `40 <= num_info_bits <= 128`.
@@ -1007,6 +1012,31 @@ mod tests_of_functions {
         }
         // Invalid input
         assert!(interleaver(6208).is_err());
+    }
+
+    #[test]
+    fn test_qpp_coefficients() {
+        // Invalid input
+        assert!(qpp_coefficients(32).is_err());
+        // Valid input
+        for num in 0 .. 60 {
+            let num_info_bits = 40 + 8 * num;
+            assert!(qpp_coefficients(num_info_bits).is_ok());
+        }
+        for num in 0 .. 32 {
+            let num_info_bits = 528 + 16 * num;
+            assert!(qpp_coefficients(num_info_bits).is_ok());
+        }
+        for num in 0 .. 32 {
+            let num_info_bits = 1056 + 32 * num;
+            assert!(qpp_coefficients(num_info_bits).is_ok());
+        }
+        for num in 0 .. 64 {
+            let num_info_bits = 2112 + 64 * num;
+            assert!(qpp_coefficients(num_info_bits).is_ok());
+        }
+        // Invalid input
+        assert!(qpp_coefficients(6208).is_err());
     }
 
     #[test]
