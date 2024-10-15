@@ -559,8 +559,10 @@ mod tests_of_interleaver {
         assert!(interleaver.interleave(&input, &mut output).is_err());
         // Valid input
         let input = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        interleaver.interleave(&input, &mut output).unwrap();
-        assert_eq!(output, ['a', 'd', 'c', 'f', 'e', 'h', 'g', 'b']);
+        for _ in 0 .. 2 {
+            interleaver.interleave(&input, &mut output).unwrap();
+            assert_eq!(output, ['a', 'd', 'c', 'f', 'e', 'h', 'g', 'b']);
+        }
     }
 
     #[test]
@@ -572,8 +574,10 @@ mod tests_of_interleaver {
         assert!(interleaver.deinterleave(&output, &mut input).is_err());
         // Valid output
         let output = ['a', 'd', 'c', 'f', 'e', 'h', 'g', 'b'];
-        interleaver.deinterleave(&output, &mut input).unwrap();
-        assert_eq!(input, ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+        for _ in 0 .. 2 {
+            interleaver.deinterleave(&output, &mut input).unwrap();
+            assert_eq!(input, ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+        }
     }
 
     #[test]
