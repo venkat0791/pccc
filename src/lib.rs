@@ -642,4 +642,52 @@ mod tests_of_functions {
         .unwrap();
         assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
     }
+
+    #[test]
+    fn test_check_decoder_inputs() {
+        let sm = rsc::StateMachine::new(&[0o13, 0o15]).unwrap();
+        let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
+        // Invalid inputs
+        let code_bits_llr = [
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0,
+        ];
+        assert!(check_decoder_inputs(&code_bits_llr, &interleaver, &sm).is_err());
+        let code_bits_llr = [
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0,
+        ];
+        assert!(check_decoder_inputs(&code_bits_llr, &interleaver, &sm).is_err());
+        // Valid inputs
+        let code_bits_llr = [
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0,
+        ];
+        assert!(check_decoder_inputs(&code_bits_llr, &interleaver, &sm).is_ok());
+    }
+
+    #[test]
+    fn test_bcjr_inputs() {
+        let sm = rsc::StateMachine::new(&[0o13, 0o15]).unwrap();
+        let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
+        let code_bits_llr = [
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0,
+        ];
+        let (top_code_bits_llr, bottom_code_bits_llr) =
+            bcjr_inputs(&code_bits_llr, &interleaver, &sm);
+        assert_eq!(
+            top_code_bits_llr,
+            [0.0, 1.0, 3.0, 4.0, 6.0, 7.0, 9.0, 10.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]
+        );
+        assert_eq!(
+            bottom_code_bits_llr,
+            [0.0, 2.0, 9.0, 11.0, 3.0, 5.0, 6.0, 8.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0]
+        );
+    }
+
+    #[test]
+    fn test_bpsk_slicer() {
+        assert_eq!(bpsk_slicer(&[0.0, 0.1, -0.2]), [Zero, Zero, One]);
+    }
 }
