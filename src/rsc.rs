@@ -945,7 +945,9 @@ mod tests_of_functions {
         )
         .unwrap();
         let correct_extrinsic_info = [-90.0, -90.0, 90.0];
+        let correct_llr_posterior = [-100.0, -100.0, 100.0];
         assert_eq!(workspace.extrinsic_info, correct_extrinsic_info);
+        assert_eq!(workspace.llr_posterior, correct_llr_posterior);
     }
 
     #[test]
