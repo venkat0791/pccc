@@ -1044,31 +1044,71 @@ mod tests_of_functions {
 
     #[test]
     fn test_compute_next_alpha_values() {
+        // Setup
         let code_bits_llr = [-8.0, 4.0, 16.0];
-        let in_bit_llr_prior = 0.0;
+        let in_bit_llr_prior = -1.0;
         let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
         let mut workspace =
             DecoderWorkspace::new(state_machine.num_states, 1, DecodingAlgo::MaxLogMAP(0));
-        workspace
-            .beta_calc
-            .all_beta_val
-            .extend(&[-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
-        workspace
-            .beta_calc
-            .all_beta_val
-            .extend(&[0.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0]);
-        workspace
-            .alpha_calc
-            .alpha_val
-            .extend(&[-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        let beta_val = [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+        workspace.beta_calc.all_beta_val.extend(&beta_val);
+        let alpha_val = [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+        workspace.alpha_calc.alpha_val.extend(&alpha_val);
         compute_next_alpha_values(
             &code_bits_llr,
             in_bit_llr_prior,
             &mut state_machine,
             &mut workspace,
         );
-        let correct_alpha_val_next = [0.0, -1.0, 13.0, 10.0, 1.0, -2.0, 12.0, 11.0];
+        // Calculations
+        let v01 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let v23 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let v45 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let v67 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let cv0 = (alpha_val[0] + v01).max(alpha_val[1] - v01);
+        let correct_alpha_val_next = [
+            (alpha_val[0] + v01).max(alpha_val[1] - v01) - cv0,
+            (alpha_val[3] + v23).max(alpha_val[2] - v23) - cv0,
+            (alpha_val[4] + v45).max(alpha_val[5] - v45) - cv0,
+            (alpha_val[7] + v67).max(alpha_val[6] - v67) - cv0,
+            (alpha_val[1] + v01).max(alpha_val[0] - v01) - cv0,
+            (alpha_val[2] + v23).max(alpha_val[3] - v23) - cv0,
+            (alpha_val[5] + v45).max(alpha_val[4] - v45) - cv0,
+            (alpha_val[6] + v67).max(alpha_val[7] - v67) - cv0,
+        ];
         assert_eq!(workspace.alpha_calc.alpha_val_next, correct_alpha_val_next);
+        let p01 = (code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let p23 = (-code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let p45 = (-code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let p67 = (code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let correct_metric_for_zero = (-INF)
+            .max(alpha_val[0] + p01 + beta_val[0])
+            .max(alpha_val[1] + p01 + beta_val[4])
+            .max(alpha_val[2] + p23 + beta_val[5])
+            .max(alpha_val[3] + p23 + beta_val[1])
+            .max(alpha_val[4] + p45 + beta_val[2])
+            .max(alpha_val[5] + p45 + beta_val[6])
+            .max(alpha_val[6] + p67 + beta_val[7])
+            .max(alpha_val[7] + p67 + beta_val[3]);
+        let correct_metric_for_one = (-INF)
+            .max(alpha_val[0] - p01 + beta_val[4])
+            .max(alpha_val[1] - p01 + beta_val[0])
+            .max(alpha_val[2] - p23 + beta_val[1])
+            .max(alpha_val[3] - p23 + beta_val[5])
+            .max(alpha_val[4] - p45 + beta_val[6])
+            .max(alpha_val[5] - p45 + beta_val[2])
+            .max(alpha_val[6] - p67 + beta_val[3])
+            .max(alpha_val[7] - p67 + beta_val[7]);
+        assert_float_eq!(
+            workspace.metric_for_zero,
+            correct_metric_for_zero,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
+            workspace.metric_for_one,
+            correct_metric_for_one,
+            abs <= 1e-8
+        );
     }
 
     #[test]
