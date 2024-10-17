@@ -909,6 +909,84 @@ mod tests_of_functions {
         assert_float_eq!(bit_metric_from_llr(One, 2.0), -1.0, abs <= 1e-8);
     }
 
+    fn correct_branch_metric_values(code_bits_llr: &[f64; 3], in_bit_llr_prior: f64) -> [f64; 4] {
+        // Element `k` is for transition from state `2k` or `2k+1` when input bit is `Zero`
+        [
+            (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] + code_bits_llr[2]) / 2.0,
+            (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] + code_bits_llr[2]) / 2.0,
+            (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] - code_bits_llr[2]) / 2.0,
+            (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] - code_bits_llr[2]) / 2.0,
+        ]
+    }
+
+    fn correct_beta_val_prev(
+        code_bits_llr: &[f64; 3],
+        in_bit_llr_prior: f64,
+        beta_val: &[f64; 8],
+    ) -> [f64; 8] {
+        let [v01, v23, v45, v67] = correct_branch_metric_values(code_bits_llr, in_bit_llr_prior);
+        let cv0 = (v01 + beta_val[0]).max(-v01 + beta_val[4]);
+        [
+            (v01 + beta_val[0]).max(-v01 + beta_val[4]) - cv0,
+            (v01 + beta_val[4]).max(-v01 + beta_val[0]) - cv0,
+            (v23 + beta_val[5]).max(-v23 + beta_val[1]) - cv0,
+            (v23 + beta_val[1]).max(-v23 + beta_val[5]) - cv0,
+            (v45 + beta_val[2]).max(-v45 + beta_val[6]) - cv0,
+            (v45 + beta_val[6]).max(-v45 + beta_val[2]) - cv0,
+            (v67 + beta_val[7]).max(-v67 + beta_val[3]) - cv0,
+            (v67 + beta_val[3]).max(-v67 + beta_val[7]) - cv0,
+        ]
+    }
+
+    fn correct_alpha_val_next(
+        alpha_val: &[f64; 8],
+        code_bits_llr: &[f64; 3],
+        in_bit_llr_prior: f64,
+    ) -> [f64; 8] {
+        let [v01, v23, v45, v67] = correct_branch_metric_values(code_bits_llr, in_bit_llr_prior);
+        let cv0 = (alpha_val[0] + v01).max(alpha_val[1] - v01);
+        [
+            (alpha_val[0] + v01).max(alpha_val[1] - v01) - cv0,
+            (alpha_val[3] + v23).max(alpha_val[2] - v23) - cv0,
+            (alpha_val[4] + v45).max(alpha_val[5] - v45) - cv0,
+            (alpha_val[7] + v67).max(alpha_val[6] - v67) - cv0,
+            (alpha_val[1] + v01).max(alpha_val[0] - v01) - cv0,
+            (alpha_val[2] + v23).max(alpha_val[3] - v23) - cv0,
+            (alpha_val[5] + v45).max(alpha_val[4] - v45) - cv0,
+            (alpha_val[6] + v67).max(alpha_val[7] - v67) - cv0,
+        ]
+    }
+
+    fn correct_metrics_for_zero_and_one(
+        alpha_val: &[f64; 8],
+        code_bits_llr: &[f64; 3],
+        beta_val: &[f64; 8],
+    ) -> (f64, f64) {
+        let p01 = (code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let p23 = (-code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let p45 = (-code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let p67 = (code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let correct_metric_for_zero = (-INF)
+            .max(alpha_val[0] + p01 + beta_val[0])
+            .max(alpha_val[1] + p01 + beta_val[4])
+            .max(alpha_val[2] + p23 + beta_val[5])
+            .max(alpha_val[3] + p23 + beta_val[1])
+            .max(alpha_val[4] + p45 + beta_val[2])
+            .max(alpha_val[5] + p45 + beta_val[6])
+            .max(alpha_val[6] + p67 + beta_val[7])
+            .max(alpha_val[7] + p67 + beta_val[3]);
+        let correct_metric_for_one = (-INF)
+            .max(alpha_val[0] - p01 + beta_val[4])
+            .max(alpha_val[1] - p01 + beta_val[0])
+            .max(alpha_val[2] - p23 + beta_val[1])
+            .max(alpha_val[3] - p23 + beta_val[5])
+            .max(alpha_val[4] - p45 + beta_val[6])
+            .max(alpha_val[5] - p45 + beta_val[2])
+            .max(alpha_val[6] - p67 + beta_val[3])
+            .max(alpha_val[7] - p67 + beta_val[7]);
+        (correct_metric_for_zero, correct_metric_for_one)
+    }
+
     #[test]
     fn test_encode() {
         let info_bits = [Zero, One, One, Zero];
@@ -1009,7 +1087,6 @@ mod tests_of_functions {
 
     #[test]
     fn test_compute_previous_beta_values() {
-        // Setup
         let code_bits_llr = [-8.0, 4.0, 16.0];
         let in_bit_llr_prior = -1.0;
         let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
@@ -1023,34 +1100,20 @@ mod tests_of_functions {
             &mut state_machine,
             &mut workspace,
         );
-        // Calculations
-        let v01 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] + code_bits_llr[2]) / 2.0;
-        let v23 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] + code_bits_llr[2]) / 2.0;
-        let v45 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] - code_bits_llr[2]) / 2.0;
-        let v67 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] - code_bits_llr[2]) / 2.0;
-        let cv0 = (v01 + beta_val[0]).max(-v01 + beta_val[4]);
-        let correct_beta_val_prev = [
-            (v01 + beta_val[0]).max(-v01 + beta_val[4]) - cv0,
-            (v01 + beta_val[4]).max(-v01 + beta_val[0]) - cv0,
-            (v23 + beta_val[5]).max(-v23 + beta_val[1]) - cv0,
-            (v23 + beta_val[1]).max(-v23 + beta_val[5]) - cv0,
-            (v45 + beta_val[2]).max(-v45 + beta_val[6]) - cv0,
-            (v45 + beta_val[6]).max(-v45 + beta_val[2]) - cv0,
-            (v67 + beta_val[7]).max(-v67 + beta_val[3]) - cv0,
-            (v67 + beta_val[3]).max(-v67 + beta_val[7]) - cv0,
-        ];
-        assert_eq!(workspace.beta_calc.beta_val_prev, correct_beta_val_prev);
+        assert_eq!(
+            workspace.beta_calc.beta_val_prev,
+            correct_beta_val_prev(&code_bits_llr, in_bit_llr_prior, &beta_val)
+        );
     }
 
     #[test]
     fn test_compute_next_alpha_values() {
-        // Setup
         let code_bits_llr = [-8.0, 4.0, 16.0];
         let in_bit_llr_prior = -1.0;
         let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
         let mut workspace =
             DecoderWorkspace::new(state_machine.num_states, 1, DecodingAlgo::MaxLogMAP(0));
-        let beta_val = [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+        let beta_val = [4.0, 3.0, 2.0, 1.0, 0.0, -1.0, -2.0, -3.0];
         workspace.beta_calc.all_beta_val.extend(&beta_val);
         let alpha_val = [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
         workspace.alpha_calc.alpha_val.extend(&alpha_val);
@@ -1060,45 +1123,12 @@ mod tests_of_functions {
             &mut state_machine,
             &mut workspace,
         );
-        // Calculations
-        let v01 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] + code_bits_llr[2]) / 2.0;
-        let v23 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] + code_bits_llr[2]) / 2.0;
-        let v45 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] - code_bits_llr[2]) / 2.0;
-        let v67 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] - code_bits_llr[2]) / 2.0;
-        let cv0 = (alpha_val[0] + v01).max(alpha_val[1] - v01);
-        let correct_alpha_val_next = [
-            (alpha_val[0] + v01).max(alpha_val[1] - v01) - cv0,
-            (alpha_val[3] + v23).max(alpha_val[2] - v23) - cv0,
-            (alpha_val[4] + v45).max(alpha_val[5] - v45) - cv0,
-            (alpha_val[7] + v67).max(alpha_val[6] - v67) - cv0,
-            (alpha_val[1] + v01).max(alpha_val[0] - v01) - cv0,
-            (alpha_val[2] + v23).max(alpha_val[3] - v23) - cv0,
-            (alpha_val[5] + v45).max(alpha_val[4] - v45) - cv0,
-            (alpha_val[6] + v67).max(alpha_val[7] - v67) - cv0,
-        ];
-        assert_eq!(workspace.alpha_calc.alpha_val_next, correct_alpha_val_next);
-        let p01 = (code_bits_llr[1] + code_bits_llr[2]) / 2.0;
-        let p23 = (-code_bits_llr[1] + code_bits_llr[2]) / 2.0;
-        let p45 = (-code_bits_llr[1] - code_bits_llr[2]) / 2.0;
-        let p67 = (code_bits_llr[1] - code_bits_llr[2]) / 2.0;
-        let correct_metric_for_zero = (-INF)
-            .max(alpha_val[0] + p01 + beta_val[0])
-            .max(alpha_val[1] + p01 + beta_val[4])
-            .max(alpha_val[2] + p23 + beta_val[5])
-            .max(alpha_val[3] + p23 + beta_val[1])
-            .max(alpha_val[4] + p45 + beta_val[2])
-            .max(alpha_val[5] + p45 + beta_val[6])
-            .max(alpha_val[6] + p67 + beta_val[7])
-            .max(alpha_val[7] + p67 + beta_val[3]);
-        let correct_metric_for_one = (-INF)
-            .max(alpha_val[0] - p01 + beta_val[4])
-            .max(alpha_val[1] - p01 + beta_val[0])
-            .max(alpha_val[2] - p23 + beta_val[1])
-            .max(alpha_val[3] - p23 + beta_val[5])
-            .max(alpha_val[4] - p45 + beta_val[6])
-            .max(alpha_val[5] - p45 + beta_val[2])
-            .max(alpha_val[6] - p67 + beta_val[3])
-            .max(alpha_val[7] - p67 + beta_val[7]);
+        assert_eq!(
+            workspace.alpha_calc.alpha_val_next,
+            correct_alpha_val_next(&alpha_val, &code_bits_llr, in_bit_llr_prior)
+        );
+        let (correct_metric_for_zero, correct_metric_for_one) =
+            correct_metrics_for_zero_and_one(&alpha_val, &code_bits_llr, &beta_val);
         assert_float_eq!(
             workspace.metric_for_zero,
             correct_metric_for_zero,
