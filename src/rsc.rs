@@ -1009,22 +1009,36 @@ mod tests_of_functions {
 
     #[test]
     fn test_compute_previous_beta_values() {
+        // Setup
         let code_bits_llr = [-8.0, 4.0, 16.0];
-        let in_bit_llr_prior = 0.0;
+        let in_bit_llr_prior = -1.0;
         let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
         let mut workspace =
             DecoderWorkspace::new(state_machine.num_states, 1, DecodingAlgo::MaxLogMAP(0));
-        workspace
-            .beta_calc
-            .all_beta_val
-            .extend(&[-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        let beta_val = [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+        workspace.beta_calc.all_beta_val.extend(&beta_val);
         compute_previous_beta_values(
             &code_bits_llr,
             in_bit_llr_prior,
             &mut state_machine,
             &mut workspace,
         );
-        let correct_beta_val_prev = [0.0, 4.0, 1.0, -3.0, 14.0, 10.0, 7.0, 11.0];
+        // Calculations
+        let v01 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let v23 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] + code_bits_llr[2]) / 2.0;
+        let v45 = (in_bit_llr_prior + code_bits_llr[0] - code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let v67 = (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] - code_bits_llr[2]) / 2.0;
+        let cv0 = (v01 + beta_val[0]).max(-v01 + beta_val[4]);
+        let correct_beta_val_prev = [
+            (v01 + beta_val[0]).max(-v01 + beta_val[4]) - cv0,
+            (v01 + beta_val[4]).max(-v01 + beta_val[0]) - cv0,
+            (v23 + beta_val[5]).max(-v23 + beta_val[1]) - cv0,
+            (v23 + beta_val[1]).max(-v23 + beta_val[5]) - cv0,
+            (v45 + beta_val[2]).max(-v45 + beta_val[6]) - cv0,
+            (v45 + beta_val[6]).max(-v45 + beta_val[2]) - cv0,
+            (v67 + beta_val[7]).max(-v67 + beta_val[3]) - cv0,
+            (v67 + beta_val[3]).max(-v67 + beta_val[7]) - cv0,
+        ];
         assert_eq!(workspace.beta_calc.beta_val_prev, correct_beta_val_prev);
     }
 
