@@ -1116,31 +1116,38 @@ mod tests_of_functions {
     #[test]
     fn test_decode() {
         let code_bits_llr = [
-            10.0, 10.0, 10.0, -10.0, -10.0, -10.0, -10.0, 10.0, 10.0, 10.0, 10.0, -10.0, 10.0,
-            10.0, -10.0, 10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
+            1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+            -1.0, 1.0, -1.0, -1.0, -1.0,
         ];
-        let info_bits_llr_prior = [-1.0, -5.0, 1.0, 3.0];
+        let mut info_bits_llr_prior = [-1.0, -5.0, 1.0, 3.0];
         let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
         let mut workspace = DecoderWorkspace::new(
             state_machine.num_states,
             info_bits_llr_prior.len(),
             DecodingAlgo::MaxLogMAP(0),
         );
-        decode(
-            &code_bits_llr,
-            &info_bits_llr_prior,
-            &mut state_machine,
-            &mut workspace,
-        )
-        .unwrap();
-        assert_eq!(
-            workspace.extrinsic_info,
-            correct_extrinsic_info(&code_bits_llr, &info_bits_llr_prior)
-        );
-        assert_eq!(
-            workspace.llr_posterior,
-            correct_llr_posterior(&code_bits_llr, &info_bits_llr_prior)
-        );
+        for idx in 0 .. 8 {
+            if idx > 0 {
+                info_bits_llr_prior.copy_from_slice(&workspace.extrinsic_info);
+            }
+            decode(
+                &code_bits_llr,
+                &info_bits_llr_prior,
+                &mut state_machine,
+                &mut workspace,
+            )
+            .unwrap();
+            assert_float_eq!(
+                workspace.extrinsic_info,
+                correct_extrinsic_info(&code_bits_llr, &info_bits_llr_prior).to_vec(),
+                abs_all <= 1e-8
+            );
+            assert_float_eq!(
+                workspace.llr_posterior,
+                correct_llr_posterior(&code_bits_llr, &info_bits_llr_prior).to_vec(),
+                abs_all <= 1e-8
+            );
+        }
     }
 
     #[test]
