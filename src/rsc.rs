@@ -938,6 +938,48 @@ mod tests_of_functions {
         ]
     }
 
+    fn correct_all_beta_val(
+        code_bits_llr: &[f64; 21],
+        info_bits_llr_prior: &[f64; 4],
+    ) -> [f64; 32] {
+        let bv6 = [0.0, -INF, -INF, -INF, -INF, -INF, -INF, -INF];
+        let bv5 = correct_beta_val_prev(
+            &[code_bits_llr[18], code_bits_llr[19], code_bits_llr[20]],
+            0.0,
+            &bv6,
+        );
+        let bv4 = correct_beta_val_prev(
+            &[code_bits_llr[15], code_bits_llr[16], code_bits_llr[17]],
+            0.0,
+            &bv5,
+        );
+        let bv3 = correct_beta_val_prev(
+            &[code_bits_llr[12], code_bits_llr[13], code_bits_llr[14]],
+            0.0,
+            &bv4,
+        );
+        let bv2 = correct_beta_val_prev(
+            &[code_bits_llr[9], code_bits_llr[10], code_bits_llr[11]],
+            info_bits_llr_prior[3],
+            &bv3,
+        );
+        let bv1 = correct_beta_val_prev(
+            &[code_bits_llr[6], code_bits_llr[7], code_bits_llr[8]],
+            info_bits_llr_prior[2],
+            &bv2,
+        );
+        let bv0 = correct_beta_val_prev(
+            &[code_bits_llr[3], code_bits_llr[4], code_bits_llr[5]],
+            info_bits_llr_prior[1],
+            &bv1,
+        );
+        [
+            bv3[0], bv3[1], bv3[2], bv3[3], bv3[4], bv3[5], bv3[6], bv3[7], bv2[0], bv2[1], bv2[2],
+            bv2[3], bv2[4], bv2[5], bv2[6], bv2[7], bv1[0], bv1[1], bv1[2], bv1[3], bv1[4], bv1[5],
+            bv1[6], bv1[7], bv0[0], bv0[1], bv0[2], bv0[3], bv0[4], bv0[5], bv0[6], bv0[7],
+        ]
+    }
+
     fn correct_alpha_val_next(
         alpha_val: &[f64; 8],
         code_bits_llr: &[f64; 3],
@@ -985,48 +1027,6 @@ mod tests_of_functions {
             .max(alpha_val[6] - p67 + beta_val[3])
             .max(alpha_val[7] - p67 + beta_val[7]);
         (correct_metric_for_zero, correct_metric_for_one)
-    }
-
-    fn correct_all_beta_val(
-        code_bits_llr: &[f64; 21],
-        info_bits_llr_prior: &[f64; 4],
-    ) -> [f64; 32] {
-        let bv6 = [0.0, -INF, -INF, -INF, -INF, -INF, -INF, -INF];
-        let bv5 = correct_beta_val_prev(
-            &[code_bits_llr[18], code_bits_llr[19], code_bits_llr[20]],
-            0.0,
-            &bv6,
-        );
-        let bv4 = correct_beta_val_prev(
-            &[code_bits_llr[15], code_bits_llr[16], code_bits_llr[17]],
-            0.0,
-            &bv5,
-        );
-        let bv3 = correct_beta_val_prev(
-            &[code_bits_llr[12], code_bits_llr[13], code_bits_llr[14]],
-            0.0,
-            &bv4,
-        );
-        let bv2 = correct_beta_val_prev(
-            &[code_bits_llr[9], code_bits_llr[10], code_bits_llr[11]],
-            info_bits_llr_prior[3],
-            &bv3,
-        );
-        let bv1 = correct_beta_val_prev(
-            &[code_bits_llr[6], code_bits_llr[7], code_bits_llr[8]],
-            info_bits_llr_prior[2],
-            &bv2,
-        );
-        let bv0 = correct_beta_val_prev(
-            &[code_bits_llr[3], code_bits_llr[4], code_bits_llr[5]],
-            info_bits_llr_prior[1],
-            &bv1,
-        );
-        [
-            bv3[0], bv3[1], bv3[2], bv3[3], bv3[4], bv3[5], bv3[6], bv3[7], bv2[0], bv2[1], bv2[2],
-            bv2[3], bv2[4], bv2[5], bv2[6], bv2[7], bv1[0], bv1[1], bv1[2], bv1[3], bv1[4], bv1[5],
-            bv1[6], bv1[7], bv0[0], bv0[1], bv0[2], bv0[3], bv0[4], bv0[5], bv0[6], bv0[7],
-        ]
     }
 
     fn correct_extrinsic_info(
