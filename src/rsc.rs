@@ -1029,6 +1029,75 @@ mod tests_of_functions {
         ]
     }
 
+    fn correct_extrinsic_info(
+        code_bits_llr: &[f64; 21],
+        info_bits_llr_prior: &[f64; 4],
+    ) -> [f64; 4] {
+        let abv = correct_all_beta_val(code_bits_llr, info_bits_llr_prior);
+        // Bit 0
+        let av0 = [0.0, -INF, -INF, -INF, -INF, -INF, -INF, -INF];
+        let (m00, m01) = correct_metrics_for_zero_and_one(
+            &av0,
+            &[code_bits_llr[0], code_bits_llr[1], code_bits_llr[2]],
+            &[
+                abv[24], abv[25], abv[26], abv[27], abv[28], abv[29], abv[30], abv[31],
+            ],
+        );
+        // Bit 1
+        let av1 = correct_alpha_val_next(
+            &av0,
+            &[code_bits_llr[0], code_bits_llr[1], code_bits_llr[2]],
+            info_bits_llr_prior[0],
+        );
+        let (m10, m11) = correct_metrics_for_zero_and_one(
+            &av1,
+            &[code_bits_llr[3], code_bits_llr[4], code_bits_llr[5]],
+            &[
+                abv[16], abv[17], abv[18], abv[19], abv[20], abv[21], abv[22], abv[23],
+            ],
+        );
+        // Bit 2
+        let av2 = correct_alpha_val_next(
+            &av1,
+            &[code_bits_llr[3], code_bits_llr[4], code_bits_llr[5]],
+            info_bits_llr_prior[1],
+        );
+        let (m20, m21) = correct_metrics_for_zero_and_one(
+            &av2,
+            &[code_bits_llr[6], code_bits_llr[7], code_bits_llr[8]],
+            &[
+                abv[8], abv[9], abv[10], abv[11], abv[12], abv[13], abv[14], abv[15],
+            ],
+        );
+        // Bit 3
+        let av3 = correct_alpha_val_next(
+            &av2,
+            &[code_bits_llr[6], code_bits_llr[7], code_bits_llr[8]],
+            info_bits_llr_prior[2],
+        );
+        let (m30, m31) = correct_metrics_for_zero_and_one(
+            &av3,
+            &[code_bits_llr[9], code_bits_llr[10], code_bits_llr[11]],
+            &[
+                abv[0], abv[1], abv[2], abv[3], abv[4], abv[5], abv[6], abv[7],
+            ],
+        );
+        [m00 - m01, m10 - m11, m20 - m21, m30 - m31]
+    }
+
+    fn correct_llr_posterior(
+        code_bits_llr: &[f64; 21],
+        info_bits_llr_prior: &[f64; 4],
+    ) -> [f64; 4] {
+        let [e0, e1, e2, e3] = correct_extrinsic_info(code_bits_llr, info_bits_llr_prior);
+        [
+            info_bits_llr_prior[0] + code_bits_llr[0] + e0,
+            info_bits_llr_prior[1] + code_bits_llr[3] + e1,
+            info_bits_llr_prior[2] + code_bits_llr[6] + e2,
+            info_bits_llr_prior[3] + code_bits_llr[9] + e3,
+        ]
+    }
+
     #[test]
     fn test_encode() {
         let info_bits = [Zero, One, One, Zero];
@@ -1098,32 +1167,34 @@ mod tests_of_functions {
     #[test]
     fn test_run_bcjr_forward_pass() {
         let code_bits_llr = [
-            -10.0, -10.0, -10.0, -10.0, 10.0, 10.0, 10.0, 10.0, -10.0, 10.0, 10.0, -10.0, 10.0,
-            -10.0, 10.0, -10.0, -10.0, -10.0,
+            10.0, 10.0, 10.0, -10.0, -10.0, -10.0, -10.0, 10.0, 10.0, 10.0, 10.0, -10.0, 10.0,
+            10.0, -10.0, 10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
         ];
-        let info_bits_llr_prior = [0.0, 0.0, 0.0];
+        let info_bits_llr_prior = [-1.0, -5.0, 1.0, 3.0];
         let mut state_machine = StateMachine::new(&[0o13, 0o15, 0o17]).unwrap();
         let mut workspace = DecoderWorkspace::new(
             state_machine.num_states,
             info_bits_llr_prior.len(),
             DecodingAlgo::MaxLogMAP(0),
         );
-        run_bcjr_backward_pass(
-            &code_bits_llr,
-            &info_bits_llr_prior,
-            &mut state_machine,
-            &mut workspace,
-        );
+        workspace
+            .beta_calc
+            .all_beta_val
+            .extend_from_slice(&correct_all_beta_val(&code_bits_llr, &info_bits_llr_prior));
         run_bcjr_forward_pass(
             &code_bits_llr,
             &info_bits_llr_prior,
             &mut state_machine,
             &mut workspace,
         );
-        let correct_extrinsic_info = [-90.0, -90.0, 90.0];
-        let correct_llr_posterior = [-100.0, -100.0, 100.0];
-        assert_eq!(workspace.extrinsic_info, correct_extrinsic_info);
-        assert_eq!(workspace.llr_posterior, correct_llr_posterior);
+        assert_eq!(
+            workspace.extrinsic_info,
+            correct_extrinsic_info(&code_bits_llr, &info_bits_llr_prior)
+        );
+        assert_eq!(
+            workspace.llr_posterior,
+            correct_llr_posterior(&code_bits_llr, &info_bits_llr_prior)
+        );
     }
 
     #[test]
