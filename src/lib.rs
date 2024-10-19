@@ -491,7 +491,7 @@ fn bcjr_inputs(
         let i_bottom = interleaver.all_in_index_given_out_index[k] * inverse_code_rate;
         bottom_code_bits_llr.push(code_bits_llr[i_bottom]);
         bottom_code_bits_llr.extend_from_slice(
-            &code_bits_llr[i_bottom + sm.num_output_bits .. i_bottom + inverse_code_rate],
+            &code_bits_llr[i_top + sm.num_output_bits .. i_top + inverse_code_rate],
         );
     }
     // Tail bits
@@ -686,7 +686,7 @@ mod tests_of_functions {
         );
         assert_eq!(
             bottom_code_bits_llr,
-            [0.0, 2.0, 9.0, 11.0, 3.0, 5.0, 6.0, 8.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0]
+            [0.0, 2.0, 9.0, 5.0, 3.0, 8.0, 6.0, 11.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0]
         );
     }
 
