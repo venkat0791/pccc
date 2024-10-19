@@ -1169,9 +1169,10 @@ mod tests_of_functions {
             &mut state_machine,
             &mut workspace,
         );
-        assert_eq!(
+        assert_float_eq!(
             workspace.beta_calc.all_beta_val,
-            correct_all_beta_val(&code_bits_llr, &info_bits_llr_prior)
+            correct_all_beta_val(&code_bits_llr, &info_bits_llr_prior).to_vec(),
+            abs_all <= 1e-8
         );
     }
 
@@ -1198,13 +1199,15 @@ mod tests_of_functions {
             &mut state_machine,
             &mut workspace,
         );
-        assert_eq!(
+        assert_float_eq!(
             workspace.extrinsic_info,
-            correct_extrinsic_info(&code_bits_llr, &info_bits_llr_prior)
+            correct_extrinsic_info(&code_bits_llr, &info_bits_llr_prior).to_vec(),
+            abs_all <= 1e-8
         );
-        assert_eq!(
+        assert_float_eq!(
             workspace.llr_posterior,
-            correct_llr_posterior(&code_bits_llr, &info_bits_llr_prior)
+            correct_llr_posterior(&code_bits_llr, &info_bits_llr_prior).to_vec(),
+            abs_all <= 1e-8
         );
     }
 
@@ -1223,9 +1226,10 @@ mod tests_of_functions {
             &mut state_machine,
             &mut workspace,
         );
-        assert_eq!(
+        assert_float_eq!(
             workspace.beta_calc.beta_val_prev,
-            correct_beta_val_prev(&code_bits_llr, in_bit_llr_prior, &beta_val)
+            correct_beta_val_prev(&code_bits_llr, in_bit_llr_prior, &beta_val).to_vec(),
+            abs_all <= 1e-8
         );
     }
 
@@ -1246,9 +1250,10 @@ mod tests_of_functions {
             &mut state_machine,
             &mut workspace,
         );
-        assert_eq!(
+        assert_float_eq!(
             workspace.alpha_calc.alpha_val_next,
-            correct_alpha_val_next(&alpha_val, &code_bits_llr, in_bit_llr_prior)
+            correct_alpha_val_next(&alpha_val, &code_bits_llr, in_bit_llr_prior).to_vec(),
+            abs_all <= 1e-8
         );
         let (correct_metric_for_zero, correct_metric_for_one) =
             correct_metrics_for_zero_and_one(&alpha_val, &code_bits_llr, &beta_val);
@@ -1281,25 +1286,44 @@ mod tests_of_functions {
             1.3,
             abs <= 1e-8
         );
-        assert!(
-            (maxstar(-1.2, 1.2, DecodingAlgo::LinearLogMAP(0)) - 1.226_601_750_600_968_3).abs()
-                < 1e-8
+        assert_float_eq!(
+            maxstar(-1.2, 1.2, DecodingAlgo::LinearLogMAP(0)),
+            1.226_601_750_600_968_3,
+            abs <= 1e-8
         );
-        assert!((maxstar(1.2, 1.3, DecodingAlgo::LogMAP(0)) - 1.944_396_660_073_571).abs() < 1e-8);
-        assert!(
-            (maxstar(-1.2, -1.3, DecodingAlgo::LogMAP(0)) + 0.555_603_339_926_429_1).abs() < 1e-8
+        assert_float_eq!(
+            maxstar(1.2, 1.3, DecodingAlgo::LogMAP(0)),
+            1.944_396_660_073_571,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
+            maxstar(-1.2, -1.3, DecodingAlgo::LogMAP(0)),
+            -0.555_603_339_926_429_1,
+            abs <= 1e-8
         );
     }
 
     #[test]
     fn test_linear_log_map_correction_term() {
-        assert!((linear_log_map_correction_term(2.6) - 0.0).abs() < 1e-8);
-        assert!((linear_log_map_correction_term(2.4) - 0.026_601_750_600_968_28).abs() < 1e-8);
+        assert_float_eq!(linear_log_map_correction_term(2.6), 0.0, abs <= 1e-8);
+        assert_float_eq!(
+            linear_log_map_correction_term(2.4),
+            0.026_601_750_600_968_28,
+            abs <= 1e-8
+        );
     }
 
     #[test]
     fn test_log_map_correction_term() {
-        assert!((log_map_correction_term(2.6) - 0.071_644_691_967_669_72).abs() < 1e-8);
-        assert!((log_map_correction_term(2.4) - 0.086_836_152_153_949_63).abs() < 1e-8);
+        assert_float_eq!(
+            log_map_correction_term(2.6),
+            0.071_644_691_967_669_72,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
+            log_map_correction_term(2.4),
+            0.086_836_152_153_949_63,
+            abs <= 1e-8
+        );
     }
 }

@@ -598,6 +598,7 @@ mod tests_of_interleaver {
 #[cfg(test)]
 mod tests_of_functions {
     use super::*;
+    use float_eq::assert_float_eq;
     use Bit::{One, Zero};
 
     #[test]
@@ -680,13 +681,15 @@ mod tests_of_functions {
         ];
         let (top_code_bits_llr, bottom_code_bits_llr) =
             bcjr_inputs(&code_bits_llr, &interleaver, &sm);
-        assert_eq!(
+        assert_float_eq!(
             top_code_bits_llr,
-            [0.0, 1.0, 3.0, 4.0, 6.0, 7.0, 9.0, 10.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]
+            [0.0, 1.0, 3.0, 4.0, 6.0, 7.0, 9.0, 10.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0].to_vec(),
+            abs_all <= 1e-8
         );
-        assert_eq!(
+        assert_float_eq!(
             bottom_code_bits_llr,
-            [0.0, 2.0, 9.0, 5.0, 3.0, 8.0, 6.0, 11.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0]
+            [0.0, 2.0, 9.0, 5.0, 3.0, 8.0, 6.0, 11.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0].to_vec(),
+            abs_all <= 1e-8
         );
     }
 
