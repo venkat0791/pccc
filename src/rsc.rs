@@ -910,6 +910,7 @@ mod tests_of_functions {
     }
 
     fn correct_branch_metric_values(code_bits_llr: &[f64; 3], in_bit_llr_prior: f64) -> [f64; 4] {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]`
         // Element `k` is for transition from state `2k` or `2k+1` when input bit is `Zero`
         [
             (in_bit_llr_prior + code_bits_llr[0] + code_bits_llr[1] + code_bits_llr[2]) / 2.0,
@@ -924,6 +925,7 @@ mod tests_of_functions {
         in_bit_llr_prior: f64,
         beta_val: &[f64; 8],
     ) -> [f64; 8] {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]` and Max-Log-MAP decoding
         let [v01, v23, v45, v67] = correct_branch_metric_values(code_bits_llr, in_bit_llr_prior);
         let cv0 = (v01 + beta_val[0]).max(-v01 + beta_val[4]);
         [
@@ -942,6 +944,7 @@ mod tests_of_functions {
         code_bits_llr: &[f64; 21],
         info_bits_llr_prior: &[f64; 4],
     ) -> [f64; 32] {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]` and Max-Log-MAP decoding
         let bv6 = [0.0, -INF, -INF, -INF, -INF, -INF, -INF, -INF];
         let bv5 = correct_beta_val_prev(
             &[code_bits_llr[18], code_bits_llr[19], code_bits_llr[20]],
@@ -985,6 +988,7 @@ mod tests_of_functions {
         code_bits_llr: &[f64; 3],
         in_bit_llr_prior: f64,
     ) -> [f64; 8] {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]` and Max-Log-MAP decoding
         let [v01, v23, v45, v67] = correct_branch_metric_values(code_bits_llr, in_bit_llr_prior);
         let cv0 = (alpha_val[0] + v01).max(alpha_val[1] - v01);
         [
@@ -1004,6 +1008,7 @@ mod tests_of_functions {
         code_bits_llr: &[f64; 3],
         beta_val: &[f64; 8],
     ) -> (f64, f64) {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]` and Max-Log-MAP decoding
         let p01 = (code_bits_llr[1] + code_bits_llr[2]) / 2.0;
         let p23 = (-code_bits_llr[1] + code_bits_llr[2]) / 2.0;
         let p45 = (-code_bits_llr[1] - code_bits_llr[2]) / 2.0;
@@ -1033,6 +1038,7 @@ mod tests_of_functions {
         code_bits_llr: &[f64; 21],
         info_bits_llr_prior: &[f64; 4],
     ) -> [f64; 4] {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]` and Max-Log-MAP decoding
         let abv = correct_all_beta_val(code_bits_llr, info_bits_llr_prior);
         // Bit 0
         let av0 = [0.0, -INF, -INF, -INF, -INF, -INF, -INF, -INF];
@@ -1089,6 +1095,7 @@ mod tests_of_functions {
         code_bits_llr: &[f64; 21],
         info_bits_llr_prior: &[f64; 4],
     ) -> [f64; 4] {
+        // NOTE: Assuming code polynomials are `[0o13, 0o15, 0o17]` and Max-Log-MAP decoding
         let [e0, e1, e2, e3] = correct_extrinsic_info(code_bits_llr, info_bits_llr_prior);
         [
             info_bits_llr_prior[0] + code_bits_llr[0] + e0,
