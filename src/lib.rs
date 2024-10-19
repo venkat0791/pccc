@@ -188,7 +188,8 @@ impl Interleaver {
     ///
     /// let mut rng = rand::thread_rng();
     /// let length = 8;
-    /// let interleaver = Interleaver::random(length, &mut rng);
+    /// let interleaver = Interleaver::random(length, &mut rng)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn random(length: usize, rng: &mut ThreadRng) -> Result<Self, Error> {
         if length == 0 {
