@@ -1022,7 +1022,7 @@ mod tests_of_functions {
     }
 
     fn all_sim_results_for_test(all_params: &[SimParams]) -> Vec<SimResults> {
-        let mut all_results = Vec::with_capacity(all_params.len());
+        let mut all_results = Vec::new();
         for params in all_params {
             all_results.push(SimResults::new(params));
         }
