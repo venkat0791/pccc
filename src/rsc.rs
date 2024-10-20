@@ -613,9 +613,9 @@ fn compute_next_alpha_values(
 fn maxstar(x: f64, y: f64, decoding_algo: DecodingAlgo) -> f64 {
     x.max(y)
         + match decoding_algo {
+            DecodingAlgo::LogMAP(_) => log_map_correction_term((x - y).abs()),
             DecodingAlgo::MaxLogMAP(_) => 0.0,
             DecodingAlgo::LinearLogMAP(_) => linear_log_map_correction_term((x - y).abs()),
-            DecodingAlgo::LogMAP(_) => log_map_correction_term((x - y).abs()),
         }
 }
 
@@ -1279,6 +1279,16 @@ mod tests_of_functions {
     #[test]
     fn test_maxstar() {
         assert_float_eq!(
+            maxstar(1.2, 1.3, DecodingAlgo::LogMAP(0)),
+            1.944_396_660_073_571,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
+            maxstar(-1.2, -1.3, DecodingAlgo::LogMAP(0)),
+            -0.555_603_339_926_429_1,
+            abs <= 1e-8
+        );
+        assert_float_eq!(
             maxstar(1.2, 1.3, DecodingAlgo::MaxLogMAP(0)),
             1.3,
             abs <= 1e-8
@@ -1296,16 +1306,6 @@ mod tests_of_functions {
         assert_float_eq!(
             maxstar(-1.2, 1.2, DecodingAlgo::LinearLogMAP(0)),
             1.226_601_750_600_968_3,
-            abs <= 1e-8
-        );
-        assert_float_eq!(
-            maxstar(1.2, 1.3, DecodingAlgo::LogMAP(0)),
-            1.944_396_660_073_571,
-            abs <= 1e-8
-        );
-        assert_float_eq!(
-            maxstar(-1.2, -1.3, DecodingAlgo::LogMAP(0)),
-            -0.555_603_339_926_429_1,
             abs <= 1e-8
         );
     }

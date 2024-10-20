@@ -99,7 +99,7 @@ fn num_snr() -> Arg {
 fn decoding_algo() -> Arg {
     Arg::new("decoding_algo")
         .short('a')
-        .value_parser(["MaxLogMAP", "LinearLogMAP", "LogMAP"])
+        .value_parser(["LogMAP", "MaxLogMAP", "LinearLogMAP"])
         .default_value("LinearLogMAP")
         .help("Desired decoding algorithm")
 }
@@ -211,9 +211,9 @@ fn all_es_over_n0_db_from_matches(matches: &ArgMatches) -> Vec<f64> {
 fn decoding_algo_from_matches(matches: &ArgMatches) -> DecodingAlgo {
     let num_iter = num_iter_from_matches(matches);
     match matches.get_one::<String>("decoding_algo").unwrap().as_str() {
+        "LogMAP" => DecodingAlgo::LogMAP(num_iter),
         "MaxLogMAP" => DecodingAlgo::MaxLogMAP(num_iter),
         "LinearLogMAP" => DecodingAlgo::LinearLogMAP(num_iter),
-        "LogMAP" => DecodingAlgo::LogMAP(num_iter),
         _ => panic!("Invalid decoding algorithm"),
     }
 }
