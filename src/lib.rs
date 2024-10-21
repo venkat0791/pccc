@@ -1,9 +1,12 @@
-//! This crate implements encoding and decoding functionality for a parallel-concatenated
-//! convolutional code (PCCC), commonly referred to as a turbo code. The encoder for such a code
-//! comprises the parallel concatenation of two identical recursive systematic convolutional (RSC)
-//! encoders, separated by an internal interleaver (the systematic bits from the second encoder are
-//! discarded). The decoder is based on iterations between two corresponding soft-input/soft-output
-//! BCJR decoders, separated by an interleaver and deinterleaver.
+//! # Parallel-concatenated convolutional code (PCCC)
+//!
+//! This crate implements encoding and decoding functionality for a _parallel-concatenated
+//! convolutional code_ (PCCC), commonly referred to as a turbo code. The encoder for such a code
+//! comprises the parallel concatenation of two identical _recursive systematic convolutional_ (RSC)
+//! encoders, separated by an internal interleaver (the systematic bits from the second encoder,
+//! operating on interleaved information bits, are discarded). The decoder is based on iterations
+//! between two corresponding soft-input/soft-output _a posteriori probability_ (APP) decoders,
+//! separated by an interleaver and deinterleaver.
 //!
 //! The [`encoder`] and [`decoder`] functions handle PCCC encoding and decoding, respectively,
 //! while the [`Interleaver`] struct models the internal interleaver. The [`Bit`] enum represents
@@ -17,30 +20,31 @@
 //! use pccc::{decoder, encoder, Bit, DecodingAlgo, Interleaver};
 //! use Bit::{One, Zero};
 //!
+//! // Rate-1/3 PCCC in LTE, 4 information bits
 //! let code_polynomials = [0o13, 0o15];
-//! let interleaver = Interleaver::new(&[0, 3, 1, 2])?;
+//! let interleaver = Interleaver::new(&[3, 0, 1, 2])?;
 //! // Encoding
-//! let info_bits = [Zero, One, One, Zero];
+//! let info_bits = [One, Zero, Zero, One];
 //! let code_bits = encoder(&info_bits, &interleaver, &code_polynomials)?;
 //! assert_eq!(
 //!     code_bits,
 //!     [
-//!         Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero, Zero,
-//!         One, One, One, One, One, Zero, One, One, One,
+//!         One, One, One, Zero, One, Zero, Zero, One, Zero, One, Zero, Zero, One, Zero, One, One,
+//!         Zero, Zero, Zero, One, One, One, Zero, Zero
 //!     ]
 //! );
 //! // Decoding
 //! let code_bits_llr = [
-//!     10.0, 10.0, 10.0, -10.0, -10.0, 10.0, -10.0, 10.0, -10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-//!     10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
+//!     -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
+//!     1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0,
 //! ];
 //! let info_bits_hat = decoder(
 //!     &code_bits_llr,
 //!     &interleaver,
 //!     &code_polynomials,
-//!     DecodingAlgo::LinearLogMAP(8),
-//! )?;
-//! assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
+//!     DecodingAlgo::LogMAP(8),
+//! )?; // Log-MAP decoding with 8 turbo iterations
+//! assert_eq!(info_bits_hat, [One, Zero, Zero, One]);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -319,22 +323,26 @@ impl Interleaver {
 /// # Errors
 ///
 /// Returns an error if `info_bits.len()` is not equal to `interleaver.length` or if
-/// `code_polynomials` is invalid.
+/// `code_polynomials` is invalid; the latter happens if the number of code polynomials is less
+/// than `2`, if the first code polynomial is either `0` or a power of `2`, or if any subsequent
+/// code polynomial is either not in the range `[1, 2^L)` or equals the first code polynomial;
+/// here, `L` is the positive integer such that the first code polynomial is in the range
+/// `(2^(L-1), 2^L)`.
 ///
 /// # Examples
 /// ```
 /// use pccc::{encoder, Bit, Interleaver};
 /// use Bit::{One, Zero};
 ///
-/// let code_polynomials = [0o13, 0o15];
-/// let interleaver = Interleaver::new(&[0, 3, 1, 2])?;
-/// let info_bits = [Zero, One, One, Zero];
+/// let code_polynomials = [0o13, 0o15]; // Rate-1/3 PCCC in LTE
+/// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // 4 information bits
+/// let info_bits = [One, Zero, Zero, One];
 /// let code_bits = encoder(&info_bits, &interleaver, &code_polynomials)?;
 /// assert_eq!(
 ///     code_bits,
 ///     [
-///         Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero, Zero,
-///         One, One, One, One, One, Zero, One, One, One,
+///         One, One, One, Zero, One, Zero, Zero, One, Zero, One, Zero, Zero, One, Zero, One, One,
+///         Zero, Zero, Zero, One, One, One, Zero, Zero
 ///     ]
 /// );
 /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -397,27 +405,30 @@ pub fn encoder(
 /// # Errors
 ///
 /// Returns an error if `code_bits_llr.len()` is incompatible with `interleaver.length` or if
-/// `code_polynomials` is invalid.
+/// `code_polynomials` is invalid; the latter happens if the number of code polynomials is less
+/// than `2`, if the first code polynomial is either `0` or a power of `2`, or if any subsequent
+/// code polynomial is either not in the range `[1, 2^L)` or equals the first code polynomial;
+/// here, `L` is the positive integer such that the first code polynomial is in the range
+/// `(2^(L-1), 2^L)`.
 ///
 /// # Examples
 /// ```
 /// use pccc::{decoder, Bit, DecodingAlgo, Interleaver};
 /// use Bit::{One, Zero};
 ///
-/// let decoding_algo = DecodingAlgo::LinearLogMAP(8);
-/// let code_polynomials = [0o13, 0o15];
-/// let interleaver = Interleaver::new(&[0, 3, 1, 2])?;
+/// let code_polynomials = [0o13, 0o15]; // Rate-1/3 PCCC in LTE
+/// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // 4 information bits
 /// let code_bits_llr = [
-///     10.0, 10.0, 10.0, -10.0, -10.0, 10.0, -10.0, 10.0, -10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-///     10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
+///     -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
+///     1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0,
 /// ];
 /// let info_bits_hat = decoder(
 ///     &code_bits_llr,
 ///     &interleaver,
 ///     &code_polynomials,
-///     decoding_algo,
-/// )?;
-/// assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
+///     DecodingAlgo::LogMAP(8),
+/// )?; // Log-MAP decoding with 8 turbo iterations
+/// assert_eq!(info_bits_hat, [One, Zero, Zero, One]);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn decoder(
