@@ -363,7 +363,7 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
 ///         num_block_errors_min: 20,
 ///         num_blocks_per_run: 10,
 ///         num_runs_min: 1,
-///         num_runs_max: 10,
+///         num_runs_max: 2,
 ///     });
 /// }
 /// lte::run_bpsk_awgn_sims(&all_params, &mut rng, "results.json")?;
