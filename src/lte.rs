@@ -315,7 +315,7 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
 ///     num_runs_min: 1,
 ///     num_runs_max: 2,
 /// };
-/// let results = lte::bpsk_awgn_sim(&params, &mut rng)?;
+/// let results: lte::SimResults = lte::bpsk_awgn_sim(&params, &mut rng)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResults, Error> {
