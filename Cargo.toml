@@ -1,7 +1,16 @@
 [package]
 name = "pccc"
 version = "0.1.0"
+authors = ["Venkat Venkatesan <sivarama.venkatesan@gmail.com>"]
 edition = "2021"
+rust-version = "1.75"
+description = "Parallel-concatenated convolutional code"
+documentation = "https://docs.rs/pccc"
+readme = "README.md"
+repository = "https://github.com/venkat0791/pccc"
+license = "MIT"
+keywords = ["turbo", "encoder", "decoder", "interleaver", "LTE"]
+categories = ["simulation", "science", "mathematics"]
 
 [dependencies]
 anyhow = "1.0"
