@@ -616,18 +616,18 @@ mod tests_of_functions {
     #[test]
     fn test_encoder() {
         let code_polynomials = [0o13, 0o15];
-        let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
+        let interleaver = Interleaver::new(&[3, 0, 1, 2]).unwrap();
         // Invalid inputs
         let info_bits = [Zero, One, One];
         assert!(encoder(&info_bits, &interleaver, &code_polynomials).is_err());
         // Valid inputs
-        let info_bits = [Zero, One, One, Zero];
+        let info_bits = [One, Zero, Zero, One];
         let code_bits = encoder(&info_bits, &interleaver, &code_polynomials).unwrap();
         assert_eq!(
             code_bits,
             [
-                Zero, Zero, Zero, One, One, Zero, One, Zero, One, Zero, Zero, Zero, Zero, Zero,
-                Zero, One, One, One, One, One, Zero, One, One, One,
+                One, One, One, Zero, One, Zero, Zero, One, Zero, One, Zero, Zero, One, Zero, One,
+                One, Zero, Zero, Zero, One, One, One, Zero, Zero
             ]
         );
     }
@@ -635,7 +635,7 @@ mod tests_of_functions {
     #[test]
     fn test_decoder() {
         let code_polynomials = [0o13, 0o15];
-        let interleaver = Interleaver::new(&[0, 3, 1, 2]).unwrap();
+        let interleaver = Interleaver::new(&[3, 0, 1, 2]).unwrap();
         // Invalid inputs
         let code_bits_llr = [10.0, -10.0, -10.0];
         assert!(decoder(
@@ -647,8 +647,8 @@ mod tests_of_functions {
         .is_err());
         // Valid inputs
         let code_bits_llr = [
-            10.0, 10.0, 10.0, -10.0, -10.0, 10.0, -10.0, 10.0, -10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-            10.0, -10.0, -10.0, -10.0, -10.0, -10.0, 10.0, -10.0, -10.0, -10.0,
+            -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0,
+            -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0,
         ];
         let info_bits_hat = decoder(
             &code_bits_llr,
@@ -657,7 +657,7 @@ mod tests_of_functions {
             DecodingAlgo::LinearLogMAP(8),
         )
         .unwrap();
-        assert_eq!(info_bits_hat, [Zero, One, One, Zero]);
+        assert_eq!(info_bits_hat, [One, Zero, Zero, One]);
     }
 
     #[test]
