@@ -322,12 +322,12 @@ impl Interleaver {
 ///
 /// # Errors
 ///
-/// Returns an error if `info_bits.len()` is not equal to `interleaver.length` or if
-/// `code_polynomials` is invalid; the latter happens if the number of code polynomials is less
-/// than `2`, if the first code polynomial is either `0` or a power of `2`, or if any subsequent
-/// code polynomial is either not in the range `[1, 2^L)` or equals the first code polynomial;
-/// here, `L` is the positive integer such that the first code polynomial is in the range
-/// `(2^(L-1), 2^L)`.
+/// Returns an error if the number of information bits is not equal to `interleaver.length` or if
+/// `code_polynomials` is invalid. The latter condition holds if the number of code polynomials is
+/// less than `2`, if the first code polynomial is either `0` or a power of `2`, or if any
+/// subsequent code polynomial is either not in the range `[1, 2^L)` or equals the first code
+/// polynomial; here, `L` is the positive integer such that the first code polynomial is in the
+/// range `(2^(L-1), 2^L)`.
 ///
 /// # Examples
 /// ```
@@ -404,12 +404,12 @@ pub fn encoder(
 ///
 /// # Errors
 ///
-/// Returns an error if `code_bits_llr.len()` is incompatible with `interleaver.length` or if
-/// `code_polynomials` is invalid; the latter happens if the number of code polynomials is less
-/// than `2`, if the first code polynomial is either `0` or a power of `2`, or if any subsequent
-/// code polynomial is either not in the range `[1, 2^L)` or equals the first code polynomial;
-/// here, `L` is the positive integer such that the first code polynomial is in the range
-/// `(2^(L-1), 2^L)`.
+/// Returns an error if the number of code bit LLR values is incompatible with `interleaver.length`
+/// or if `code_polynomials` is invalid. The latter condition holds if the number of code
+/// polynomials is less than `2`, if the first code polynomial is either `0` or a power of `2`, or
+/// if any subsequent code polynomial is either not in the range `[1, 2^L)` or equals the first
+/// code polynomial; here, `L` is the positive integer such that the first code polynomial is in
+/// the range `(2^(L-1), 2^L)`.
 ///
 /// # Examples
 /// ```
