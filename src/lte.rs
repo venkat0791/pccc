@@ -28,14 +28,13 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use rand::prelude::{Rng, ThreadRng};
-use rand_distr::StandardNormal;
+use rand::prelude::ThreadRng;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
 
-use crate::{Bit, DecodingAlgo, Error, Interleaver};
+use crate::{utils, Bit, DecodingAlgo, Error, Interleaver};
 
 const CODE_POLYNOMIALS: [usize; 2] = [0o13, 0o15];
 const INVERSE_CODE_RATE: usize = 3;
@@ -322,11 +321,11 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
     params.check()?;
     let mut results = SimResults::new(params);
     while !results.sim_complete() {
-        let info_bits = random_bits(params.num_info_bits_per_block as usize, rng);
+        let info_bits = utils::random_bits(params.num_info_bits_per_block as usize, rng);
         let code_bits = encoder(&info_bits)?;
-        let code_bits_llr = bpsk_awgn_channel(&code_bits, params.es_over_n0_db, rng);
+        let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, params.es_over_n0_db, rng);
         let info_bits_hat = decoder(&code_bits_llr, params.decoding_algo)?;
-        let num_info_bit_errors_this_block = error_count(&info_bits_hat, &info_bits);
+        let num_info_bit_errors_this_block = utils::error_count(&info_bits_hat, &info_bits);
         results.update_after_block(num_info_bit_errors_this_block);
         results.print_progress_message();
     }
@@ -715,44 +714,6 @@ fn invalid_num_info_bits_message(num_info_bits: usize) -> String {
     format!("Number of information bits {num_info_bits} is not in Table 5.1.3-3 of 3GPP TS 36.212")
 }
 
-/// Returns given number of random bits.
-fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
-    (0 .. num_bits)
-        .map(|_| {
-            if rng.gen_bool(0.5) {
-                Bit::One
-            } else {
-                Bit::Zero
-            }
-        })
-        .collect()
-}
-
-/// Returns LLR values at BPSK-AWGN channel output corresponding to given bits.
-fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64, rng: &mut ThreadRng) -> Vec<f64> {
-    let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
-    let noise_var = 0.5 / es_over_n0;
-    bits.iter()
-        .map(|b| match b {
-            Bit::Zero => 1f64,
-            Bit::One => -1f64,
-        })
-        .map(|x| 4.0 * es_over_n0 * (x + noise_var.sqrt() * rng.sample::<f64, _>(StandardNormal)))
-        .collect()
-}
-
-/// Returns number of errors in a given sequence with respect to a given reference sequence.
-fn error_count<T: PartialEq>(seq: &[T], ref_seq: &[T]) -> u32 {
-    u32::try_from(
-        ref_seq
-            .iter()
-            .zip(seq.iter())
-            .filter(|&(x, y)| x != y)
-            .count(),
-    )
-    .expect("Number of errors must be within range of `u32` type")
-}
-
 #[cfg(test)]
 mod tests_of_simparams {
     use super::*;
@@ -932,21 +893,20 @@ mod tests_of_simresults {
 
 #[cfg(test)]
 mod tests_of_functions {
-
     use super::*;
-    use Bit::{One, Zero};
 
     #[test]
     fn test_encoder() {
         let mut rng = rand::thread_rng();
-        let info_bits = random_bits(40, &mut rng);
+        let info_bits = utils::random_bits(40, &mut rng);
         assert!(encoder(&info_bits).is_ok());
     }
 
     #[test]
     fn test_decoder() {
         let mut rng = rand::thread_rng();
-        let code_bits_llr = bpsk_awgn_channel(&random_bits(132, &mut rng), 10.0, &mut rng);
+        let code_bits_llr =
+            utils::bpsk_awgn_channel(&utils::random_bits(132, &mut rng), 10.0, &mut rng);
         assert!(decoder(&code_bits_llr, DecodingAlgo::LinearLogMAP(8)).is_ok());
     }
 
@@ -1175,58 +1135,5 @@ mod tests_of_functions {
             qpp_coefficients_4160_to_6144_bits(6144).unwrap(),
             (263, 480)
         );
-    }
-
-    #[test]
-    #[allow(clippy::cast_possible_truncation)]
-    fn test_random_bits() {
-        let mut rng = rand::thread_rng();
-        let num_bits = 0;
-        let bits: Vec<Bit> = random_bits(num_bits, &mut rng);
-        assert!(bits.is_empty());
-        let num_bits = 10000;
-        let bits = random_bits(num_bits, &mut rng);
-        let num_zeros = bits.iter().filter(|&b| *b == Zero).count();
-        let num_ones = bits.iter().filter(|&b| *b == One).count();
-        assert!(num_zeros > 9 * num_bits / 20 && num_ones > 9 * num_bits / 20);
-    }
-
-    #[test]
-    #[allow(clippy::cast_precision_loss)]
-    #[allow(clippy::cast_possible_truncation)]
-    fn test_bpsk_awgn_channel() {
-        let mut rng = rand::thread_rng();
-        let bits: Vec<Bit> = random_bits(0, &mut rng);
-        assert!(bpsk_awgn_channel(&bits, 0.0, &mut rng).is_empty());
-        let es_over_n0_db = 20f64;
-        let num_bits = 10000;
-        let bits: Vec<Bit> = random_bits(num_bits, &mut rng);
-        let bits_llr = bpsk_awgn_channel(&bits, es_over_n0_db, &mut rng);
-        let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
-        let noise_var_est = bits_llr
-            .iter()
-            .zip(bits)
-            .map(|(y, b)| match b {
-                Zero => y - 4.0 * es_over_n0,
-                One => y + 4.0 * es_over_n0,
-            })
-            .map(|x| x * x)
-            .sum::<f64>()
-            / f64::from(num_bits as u32);
-        assert!(noise_var_est > 7.2 * es_over_n0 && noise_var_est < 8.8 * es_over_n0);
-    }
-
-    #[test]
-    fn test_error_count() {
-        assert_eq!(error_count(&[], &[One, Zero]), 0);
-        assert_eq!(error_count(&[One, Zero], &[]), 0);
-        // Longer `seq`
-        let ref_seq = [One, Zero, Zero, One, One, One, Zero, Zero];
-        let seq = [One, One, Zero, Zero, One, One, Zero, Zero, Zero, One];
-        assert_eq!(error_count(&seq, &ref_seq), 2);
-        // Shorter `seq`
-        let ref_seq = [One, Zero, Zero, One, One, One, Zero, Zero, Zero, One];
-        let seq = [One, One, Zero, Zero, One, One, Zero, Zero];
-        assert_eq!(error_count(&seq, &ref_seq), 2);
     }
 }

@@ -72,6 +72,7 @@ use thiserror::Error;
 
 pub mod lte;
 mod rsc;
+pub mod utils;
 
 /// Custom error type
 #[derive(Error, Debug)]
@@ -461,7 +462,7 @@ pub fn decoder(
         interleaver.deinterleave(&ws.extrinsic_info, &mut info_bits_llr_prior)?;
         rsc::decode(&top_code_bits_llr, &info_bits_llr_prior, &mut sm, &mut ws)?;
     }
-    Ok(bpsk_slicer(&ws.llr_posterior))
+    Ok(utils::bpsk_slicer(&ws.llr_posterior))
 }
 
 /// Checks validity of decoder inputs.
@@ -515,14 +516,6 @@ fn bcjr_inputs(
         &code_bits_llr[num_info_bits * inverse_code_rate + sm.memory_len * sm.num_output_bits ..],
     );
     (top_code_bits_llr, bottom_code_bits_llr)
-}
-
-/// Returns BPSK slicer output.
-#[must_use]
-pub(crate) fn bpsk_slicer(syms: &[f64]) -> Vec<Bit> {
-    syms.iter()
-        .map(|&x| if x >= 0.0 { Bit::Zero } else { Bit::One })
-        .collect()
 }
 
 #[cfg(test)]
@@ -703,10 +696,5 @@ mod tests_of_functions {
             [0.0, 2.0, 9.0, 5.0, 3.0, 8.0, 6.0, 11.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0].to_vec(),
             abs_all <= 1e-8
         );
-    }
-
-    #[test]
-    fn test_bpsk_slicer() {
-        assert_eq!(bpsk_slicer(&[0.0, 0.1, -0.2]), [Zero, Zero, One]);
     }
 }
