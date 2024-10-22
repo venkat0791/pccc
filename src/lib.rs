@@ -353,7 +353,7 @@ pub fn encoder(
     code_polynomials: &[usize],
 ) -> Result<Vec<Bit>, Error> {
     let mut sm = rsc::StateMachine::new(code_polynomials)?;
-    let num_info_bits = info_bits.len();
+    let num_info_bits = interleaver.length;
     let num_code_bits_per_rsc = (num_info_bits + sm.memory_len) * sm.num_output_bits;
     // Top RSC encoder output
     let mut top_code_bits = Vec::with_capacity(num_code_bits_per_rsc);
