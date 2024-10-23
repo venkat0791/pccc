@@ -1,7 +1,13 @@
-//! Collection of useful functions for simulating code performance
+//! # Some useful functions for simulating code performance
+//!
+//! The [`random_bits`] function returns a given number of random bits; the [`bpsk_awgn_channel`]
+//! function returns the LLR values at the output of a BPSK-AWGN channel corresponding to given
+//! input bits; the [`bpsk_slicer`] function slices symbols to bits; and the [`error_count`]
+//! function returns the number of errors in a sequence with respect to a reference sequence.
 //!
 //! # Examples
 //!
+//! The code below illustrates the usage of the functions in this module.
 //! ```
 //! use pccc::utils;
 //!
