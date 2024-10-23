@@ -1,30 +1,25 @@
-//! Encoder and decoder for the rate-1/3 PCCC used in LTE
+//! # Encoder and decoder for the rate-1/3 PCCC in LTE
 //!
 //! The encoder and decoder for the LTE PCCC are implemented in [`encoder`] and [`decoder`],
 //! respectively. The [`bpsk_awgn_sim`] function simulates the performance of this code over a
 //! BPSK-AWGN channel. The parameters of the simulation and the results from it are captured in the
-//! [`SimParams`] and [`SimResults`] structs, respectively.
+//! [`SimParams`] and [`SimResults`] structs, respectively. Finally, the [`run_bpsk_awgn_sims`]
+//! function can run multiple such simulations and save the results to a JSON file.
 //!
 //! # Examples
 //!
-//! This example shows how to evaluate the BER/BLER performance of the LTE PCCC with a block size
-//! of 40 information bits, over a BPSK-AWGN channel at an SNR (Es/N0) of -3 dB:
+//! This example shows how to encode 40 information bits with the LTE PCCC, pass the resulting code
+//! bits through a BPSK-AWGN channel at an SNR of -3 dB, and decode the resulting channel output
+//! with 8 iterations of the Log-MAP algorithm:
 //! ```
-//! use pccc::{lte, DecodingAlgo};
-//!
+//! use pccc::{lte, DecodingAlgo, utils};
 //! let mut rng = rand::thread_rng();
-//! let params = lte::SimParams {
-//!     num_info_bits_per_block: 40,
-//!     es_over_n0_db: -3.0,
-//!     decoding_algo: DecodingAlgo::LinearLogMAP(8),
-//!     num_block_errors_min: 10,
-//!     num_blocks_per_run: 10,
-//!     num_runs_min: 1,
-//!     num_runs_max: 2,
-//! };
-//! let results: lte::SimResults = lte::bpsk_awgn_sim(&params, &mut rng)?;
-//! println!("BER = {}", results.info_bit_error_rate());
-//! println!("BLER = {}", results.block_error_rate());
+//! let num_info_bits = 40;
+//! let es_over_n0_db = -3.0;
+//! let info_bits = utils::random_bits(num_info_bits, &mut rng);
+//! let code_bits = lte::encoder(&info_bits)?;
+//! let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, es_over_n0_db, &mut rng);
+//! let info_bits_hat = lte::decoder(&code_bits_llr, DecodingAlgo::LogMAP(8))?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -242,8 +237,8 @@ impl SimResults {
 ///
 /// # Errors
 ///
-/// Returns an error if `info_bits.len()` is not one of the values specified in Table 5.1.3-3 of
-/// 3GPP TS 36.212.
+/// Returns an error if the number of information bits does not equal any of the block sizes in
+/// Table 5.1.3-3 of 3GPP TS 36.212.
 pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
     let qpp_interleaver = interleaver(info_bits.len())?;
     crate::encoder(info_bits, &qpp_interleaver, &CODE_POLYNOMIALS)
@@ -263,8 +258,8 @@ pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
 ///
 /// # Errors
 ///
-/// Returns an error if `code_bits_llr.len()` does not correspond to one of the block sizes in
-/// Table 5.1.3-3 of 3GPP TS 36.212.
+/// Returns an error if the number of code bit LLR values does not correspond to any of the block
+/// sizes in Table 5.1.3-3 of 3GPP TS 36.212.
 pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec<Bit>, Error> {
     if code_bits_llr.len() < NUM_TAIL_CODE_BITS {
         return Err(Error::InvalidInput(format!(
@@ -308,7 +303,7 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
 /// let params = lte::SimParams {
 ///     num_info_bits_per_block: 40,
 ///     es_over_n0_db: -3.0,
-///     decoding_algo: DecodingAlgo::LinearLogMAP(8),
+///     decoding_algo: DecodingAlgo::LogMAP(8),
 ///     num_block_errors_min: 10,
 ///     num_blocks_per_run: 10,
 ///     num_runs_min: 1,
@@ -333,7 +328,7 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
     Ok(results)
 }
 
-/// Runs simulations of rate-1/3 LTE PCCC over BPSK-AWGN channel and saves results to JSON file.
+/// Runs simulations of rate-1/3 LTE PCCC over a BPSK-AWGN channel and saves results to JSON file.
 ///
 /// # Parameters
 ///
@@ -359,14 +354,14 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
 ///     all_params.push(lte::SimParams {
 ///         num_info_bits_per_block,
 ///         es_over_n0_db: -3.0,
-///         decoding_algo: DecodingAlgo::LinearLogMAP(8),
-///         num_block_errors_min: 20,
-///         num_blocks_per_run: 10,
+///         decoding_algo: DecodingAlgo::LogMAP(8),
+///         num_block_errors_min: 100,
+///         num_blocks_per_run: 100,
 ///         num_runs_min: 1,
-///         num_runs_max: 2,
+///         num_runs_max: 100,
 ///     });
 /// }
-/// lte::run_bpsk_awgn_sims(&all_params, &mut rng, "results.json")?;
+/// // lte::run_bpsk_awgn_sims(&all_params, &mut rng, "results.json")?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn run_bpsk_awgn_sims(
@@ -422,16 +417,7 @@ pub fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>,
     Ok(all_results)
 }
 
-/// Returns quadratic permutation polynomial (QPP) interleaver for LTE rate-1/3 PCCC.
-///
-/// # Parameters
-///
-/// - `num_info_bits`: Number of information bits. Must be one of the values specified in Table
-///   5.1.3-3 of 3GPP TS 36.212.
-///
-/// # Errors
-///
-/// Returns an error if `num_info_bits` is invalid.
+/// Returns quadratic permutation polynomial (QPP) interleaver for rate-1/3 LTE PCCC.
 fn interleaver(num_info_bits: usize) -> Result<Interleaver, Error> {
     let (coeff1, coeff2) = qpp_coefficients(num_info_bits)?;
     let perm: Vec<usize> = (0 .. num_info_bits)
