@@ -17,7 +17,6 @@
 use crate::Bit;
 use rand::{prelude::ThreadRng, Rng};
 use rand_distr::StandardNormal;
-use std::convert::TryFrom;
 
 /// Returns given number of random bits.
 ///
@@ -96,22 +95,14 @@ pub fn bpsk_slicer(syms: &[f64]) -> Vec<Bit> {
 ///
 /// # Returns
 ///
-/// - `err_count`: Number of positions in which the two given sequences differ. If the two
-///   sequences are of different lengths, then the longer sequence is effectively truncated to the
-///   length of the shorter one.
-///
-/// # Panics
-///
-/// Panics if the number of errors is outside the range of `u32`.
-pub fn error_count<T: PartialEq>(seq: &[T], ref_seq: &[T]) -> u32 {
-    u32::try_from(
-        ref_seq
-            .iter()
-            .zip(seq.iter())
-            .filter(|&(x, y)| x != y)
-            .count(),
-    )
-    .expect("Number of errors must be within range of `u32` type")
+/// - `err_count`: Number of positions in which the two sequences differ. If they are of different
+///   lengths, then the longer sequence is effectively truncated to the length of the shorter one.
+pub fn error_count<T: PartialEq>(seq: &[T], ref_seq: &[T]) -> usize {
+    ref_seq
+        .iter()
+        .zip(seq.iter())
+        .filter(|&(x, y)| x != y)
+        .count()
 }
 
 #[cfg(test)]

@@ -317,6 +317,7 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
 /// let results: lte::SimResults = lte::bpsk_awgn_sim(&params, &mut rng)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
+#[allow(clippy::cast_possible_truncation)]
 pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResults, Error> {
     params.check()?;
     let mut results = SimResults::new(params);
@@ -326,7 +327,7 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
         let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, params.es_over_n0_db, rng);
         let info_bits_hat = decoder(&code_bits_llr, params.decoding_algo)?;
         let num_info_bit_errors_this_block = utils::error_count(&info_bits_hat, &info_bits);
-        results.update_after_block(num_info_bit_errors_this_block);
+        results.update_after_block(num_info_bit_errors_this_block as u32);
         results.print_progress_message();
     }
     Ok(results)
