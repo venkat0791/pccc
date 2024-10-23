@@ -3,10 +3,9 @@
 //! This crate implements encoding and decoding functionality for a _parallel-concatenated
 //! convolutional code_ (PCCC), commonly referred to as a turbo code. The encoder for such a code
 //! comprises the parallel concatenation of two identical _recursive systematic convolutional_ (RSC)
-//! encoders, separated by an internal interleaver (the systematic bits from the second encoder,
-//! operating on interleaved information bits, are discarded). The decoder is based on iterations
-//! between two corresponding soft-input/soft-output _a posteriori probability_ (APP) decoders,
-//! separated by an interleaver and deinterleaver.
+//! encoders, separated by an internal interleaver. The decoder is based on iterations between two
+//! corresponding soft-input/soft-output _a posteriori probability_ (APP) decoders, separated by an
+//! interleaver and deinterleaver.
 //!
 //! The [`encoder`] and [`decoder`] functions handle PCCC encoding and decoding, respectively,
 //! while the [`Interleaver`] struct models the internal interleaver. The [`Bit`] enum represents
