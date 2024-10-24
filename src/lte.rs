@@ -328,7 +328,7 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
     Ok(results)
 }
 
-/// Runs simulations of rate-1/3 LTE PCCC over a BPSK-AWGN channel and saves results to JSON file.
+/// Runs simulations of rate-1/3 LTE PCCC over a BPSK-AWGN channel and saves results to a JSON file.
 ///
 /// # Parameters
 ///
@@ -383,17 +383,7 @@ pub fn run_bpsk_awgn_sims(
 }
 
 /// Saves all simulation results to a JSON file.
-///
-/// # Parameters
-///
-/// - `all_results`: All simulation results to be saved.
-///
-/// - `json_filename`: Name of the JSON file to which all simulation results must be written.
-///
-/// # Errors
-///
-/// Returns an error if creating or writing to the JSON file fails.
-pub fn save_all_sim_results_to_file(
+fn save_all_sim_results_to_file(
     all_results: &[SimResults],
     json_filename: &str,
 ) -> Result<(), Error> {
@@ -403,15 +393,7 @@ pub fn save_all_sim_results_to_file(
 }
 
 /// Returns all simulation results from a JSON file.
-///
-/// # Parameters
-///
-/// - `json_filename`: Name of the JSON file from which all simulation results must be read.
-///
-/// # Errors
-///
-/// Returns an error if opening or reading from the JSON file fails.
-pub fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
+fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
     let reader = BufReader::new(File::open(json_filename)?);
     let all_results = serde_json::from_reader(reader)?;
     Ok(all_results)
