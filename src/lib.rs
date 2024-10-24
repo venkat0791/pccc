@@ -100,7 +100,7 @@ pub enum Bit {
 }
 
 /// Enumeration of PCCC decoding algorithms
-#[derive(Clone, Eq, PartialEq, Debug, Copy, Deserialize, Serialize)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Copy, Deserialize, Serialize)]
 pub enum DecodingAlgo {
     /// Log-MAP decoding with given number of turbo iterations
     LogMAP(u32),

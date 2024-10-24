@@ -12,7 +12,7 @@
 //! bits through a BPSK-AWGN channel at an SNR of -3 dB, and decode the resulting channel output
 //! with 8 iterations of the Log-MAP algorithm:
 //! ```
-//! use pccc::{lte, DecodingAlgo, utils};
+//! use pccc::{lte, utils, DecodingAlgo};
 //! let mut rng = rand::thread_rng();
 //! let num_info_bits = 40;
 //! let es_over_n0_db = -3.0;
@@ -242,6 +242,13 @@ impl SimResults {
 pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
     let qpp_interleaver = interleaver(info_bits.len())?;
     crate::encoder(info_bits, &qpp_interleaver, &CODE_POLYNOMIALS)
+}
+
+/// Parameters that identify a simulation case in plots of BLER/BER versus SNR
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Copy)]
+struct SimCase {
+    num_info_bits_per_block: u32,
+    decoding_algo: DecodingAlgo,
 }
 
 /// Returns information bit decisions from rate-1/3 LTE PCCC decoder for given code bit LLR values.
