@@ -23,6 +23,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use itertools::Itertools;
 use rand::prelude::ThreadRng;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -231,7 +232,11 @@ struct SimCase {
 
 impl fmt::Display for SimCase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} bits/block, {}", self.num_info_bits_per_block, self.decoding_algo)
+        write!(
+            f,
+            "{} bits/block, {}",
+            self.num_info_bits_per_block, self.decoding_algo
+        )
     }
 }
 
@@ -416,6 +421,19 @@ fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Err
     let reader = BufReader::new(File::open(json_filename)?);
     let all_results = serde_json::from_reader(reader)?;
     Ok(all_results)
+}
+
+/// Returns all simulation results for a given simulation case.
+#[allow(clippy::cast_possible_truncation)]
+fn all_sim_results_for_sim_case(all_results: &[SimResults], case: SimCase) -> Vec<SimResults> {
+    let mut all_results_for_case = Vec::new();
+    for results in all_results {
+        if SimCase::from(results) == case {
+            all_results_for_case.push(*results);
+        }
+    }
+    all_results_for_case.sort_by_key(|results| (1e6 * results.params.es_over_n0_db) as i32);
+    all_results_for_case
 }
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for rate-1/3 LTE PCCC.
@@ -954,7 +972,7 @@ mod tests_of_functions {
     fn all_sim_params_for_test() -> Vec<SimParams> {
         let mut all_params = Vec::new();
         for num_info_bits_per_block in [40, 48] {
-            for es_over_n0_db in [-3.5, -3.0] {
+            for es_over_n0_db in [-3.5, -3.0, -4.0] {
                 all_params.push(SimParams {
                     num_info_bits_per_block,
                     es_over_n0_db,
@@ -993,6 +1011,31 @@ mod tests_of_functions {
         save_all_sim_results_to_file(&all_results, json_filename).unwrap();
         let all_results_saved = all_sim_results_from_file(json_filename).unwrap();
         assert_eq!(all_results, all_results_saved);
+    }
+
+    #[test]
+    fn test_all_sim_results_for_sim_case() {
+        let all_results = all_sim_results_for_test(&all_sim_params_for_test());
+        assert_eq!(
+            all_sim_results_for_sim_case(
+                &all_results,
+                SimCase {
+                    num_info_bits_per_block: 40,
+                    decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                },
+            ),
+            [all_results[2], all_results[0], all_results[1]]
+        );
+        assert_eq!(
+            all_sim_results_for_sim_case(
+                &all_results,
+                SimCase {
+                    num_info_bits_per_block: 48,
+                    decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                },
+            ),
+            [all_results[5], all_results[3], all_results[4]]
+        );
     }
 
     #[test]
