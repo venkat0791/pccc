@@ -25,6 +25,7 @@
 
 use rand::prelude::ThreadRng;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
@@ -221,6 +222,28 @@ impl SimResults {
     }
 }
 
+/// Parameters that identify a distinct simulation case
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Copy)]
+struct SimCase {
+    num_info_bits_per_block: u32,
+    decoding_algo: DecodingAlgo,
+}
+
+impl fmt::Display for SimCase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} bits/block, {}", self.num_info_bits_per_block, self.decoding_algo)
+    }
+}
+
+impl From<&SimResults> for SimCase {
+    fn from(results: &SimResults) -> SimCase {
+        SimCase {
+            num_info_bits_per_block: results.params.num_info_bits_per_block,
+            decoding_algo: results.params.decoding_algo,
+        }
+    }
+}
+
 /// Returns code bits from rate-1/3 LTE PCCC encoder for given information bits.
 ///
 /// # Parameters
@@ -238,13 +261,6 @@ impl SimResults {
 pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
     let qpp_interleaver = interleaver(info_bits.len())?;
     crate::encoder(info_bits, &qpp_interleaver, &CODE_POLYNOMIALS)
-}
-
-/// Parameters that identify a simulation case in plots of BLER/BER versus SNR
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Copy)]
-struct SimCase {
-    num_info_bits_per_block: u32,
-    decoding_algo: DecodingAlgo,
 }
 
 /// Returns information bit decisions from rate-1/3 LTE PCCC decoder for given code bit LLR values.
