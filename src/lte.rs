@@ -104,11 +104,7 @@ impl SimParams {
 
     /// Prints decoding algorithm to use.
     fn print_decoding_algo(&self) {
-        match self.decoding_algo {
-            DecodingAlgo::LogMAP(n) => eprintln!("Log-MAP decoding, {n} iterations"),
-            DecodingAlgo::MaxLogMAP(n) => eprintln!("Max-Log-MAP decoding, {n} iterations"),
-            DecodingAlgo::LinearLogMAP(n) => eprintln!("Linear-Log-MAP decoding, {n} iterations"),
-        };
+        eprintln!("{}", self.decoding_algo);
     }
 
     /// Prints desired minimum number of block errors.

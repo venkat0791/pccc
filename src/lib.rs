@@ -63,6 +63,7 @@
     unused_qualifications
 )]
 
+use std::fmt;
 use std::io;
 
 use rand::{rngs::ThreadRng, seq::SliceRandom};
@@ -117,6 +118,16 @@ impl DecodingAlgo {
             DecodingAlgo::LogMAP(n)
             | DecodingAlgo::MaxLogMAP(n)
             | DecodingAlgo::LinearLogMAP(n) => n,
+        }
+    }
+}
+
+impl fmt::Display for DecodingAlgo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DecodingAlgo::LogMAP(n) => write!(f, "Log-MAP decoding, {n} iterations"),
+            DecodingAlgo::MaxLogMAP(n) => write!(f, "Max-Log-MAP decoding, {n} iterations"),
+            DecodingAlgo::LinearLogMAP(n) => write!(f, "Linear-Log-MAP decoding, {n} iterations"),
         }
     }
 }
