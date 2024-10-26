@@ -112,7 +112,16 @@ pub enum DecodingAlgo {
 }
 
 impl DecodingAlgo {
-    /// Returns number of turbo iterations held in the variant.
+    /// Returns the name of the variant.
+    fn name(&self) -> &str {
+        match self {
+            DecodingAlgo::LogMAP(_) => "Log-MAP",
+            DecodingAlgo::MaxLogMAP(_) => "Max-Log-MAP",
+            DecodingAlgo::LinearLogMAP(_) => "Linear-Log-MAP",
+        }
+    }
+
+    /// Returns the number of turbo iterations held in the variant.
     fn num_iter(self) -> u32 {
         match self {
             DecodingAlgo::LogMAP(n)
@@ -124,11 +133,7 @@ impl DecodingAlgo {
 
 impl fmt::Display for DecodingAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DecodingAlgo::LogMAP(n) => write!(f, "Log-MAP decoding, {n} iterations"),
-            DecodingAlgo::MaxLogMAP(n) => write!(f, "Max-Log-MAP decoding, {n} iterations"),
-            DecodingAlgo::LinearLogMAP(n) => write!(f, "Linear-Log-MAP decoding, {n} iterations"),
-        }
+        write!(f, "{} decoding, {} iterations", self.name(), self.num_iter())
     }
 }
 
