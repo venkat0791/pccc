@@ -137,7 +137,7 @@ fn num_runs_min() -> Arg {
     Arg::new("num_runs_min")
         .short('n')
         .value_parser(value_parser!(u32))
-        .default_value("1")
+        .default_value("10")
         .help("Minimum number of runs of blocks to be simulated")
 }
 
