@@ -406,6 +406,45 @@ pub fn run_bpsk_awgn_sims(
     Ok(())
 }
 
+/// Prints a summary of all the simulation results in a JSON file.
+///
+/// # Parameters
+///
+/// - `json_filename`: Name of the JSON file containing all the simulation results.
+///
+/// # Errors
+///
+/// Returns an error if opening or reading from the JSON file fails.
+pub fn summarize_all_sim_results(json_filename: &str) -> Result<(), Error> {
+    let all_results = all_sim_results_from_file(json_filename)?;
+    let mut all_cases: Vec<SimCase> = all_results.iter().map(SimCase::from).unique().collect();
+    all_cases.sort_by_key(|case| case.num_info_bits_per_block);
+    for case in all_cases {
+        let all_results_for_case = all_sim_results_for_sim_case(&all_results, case);
+        let all_es_over_n0_db = all_results_for_case
+            .iter()
+            .map(|&results| results.params.es_over_n0_db);
+        let all_info_bit_error_rate = all_results_for_case
+            .iter()
+            .map(|&results| results.info_bit_error_rate());
+        let all_block_error_rate = all_results_for_case
+            .iter()
+            .map(|&results| results.block_error_rate());
+        let banner_str = "=".repeat(case.to_string().len());
+        println!("\n{banner_str}");
+        println!("{case}");
+        println!("{banner_str}");
+        println!(" Es/N0 (dB)    BER        BLER");
+        all_info_bit_error_rate
+            .zip(all_block_error_rate)
+            .zip(all_es_over_n0_db)
+            .for_each(|((ber, bler), es_over_n0_db)| {
+                println!("{es_over_n0_db:>8.2}     {ber:7.2e}     {bler:7.2e}");
+            });
+    }
+    Ok(())
+}
+
 /// Saves all simulation results to a JSON file.
 fn save_all_sim_results_to_file(
     all_results: &[SimResults],
@@ -967,6 +1006,11 @@ mod tests_of_functions {
             },
         ];
         run_bpsk_awgn_sims(&all_params, &mut rng, "results.json").unwrap();
+    }
+
+    #[test]
+    fn test_summarize_all_sim_results() {
+        summarize_all_sim_results("results_for_test.json").unwrap();
     }
 
     fn all_sim_params_for_test() -> Vec<SimParams> {
