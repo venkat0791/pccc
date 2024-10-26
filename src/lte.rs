@@ -182,12 +182,7 @@ impl SimResults {
     fn print_progress_message(&self) {
         if self.run_complete() {
             eprint!(
-                "\r{:5} bits/block, Es/N0 = {:6.3} dB: \
-                 BER = {:9.4e}, BLER = {:9.4e} ({}/{}, {}/{})",
-                self.params.num_info_bits_per_block,
-                self.params.es_over_n0_db,
-                self.info_bit_error_rate(),
-                self.block_error_rate(),
+                "\rBER = {}/{}, BLER = {}/{}",
                 self.num_info_bit_errors,
                 self.num_info_bits,
                 self.num_block_errors,
