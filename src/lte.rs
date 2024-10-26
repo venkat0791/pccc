@@ -42,10 +42,10 @@ const NUM_TAIL_CODE_BITS: usize = 12;
 pub struct SimParams {
     /// Number of information bits per block
     pub num_info_bits_per_block: u32,
-    /// Ratio (dB) of symbol energy to noise power spectral density at BPSK-AWGN channel output
-    pub es_over_n0_db: f64,
     /// Decoding algorithm to be used
     pub decoding_algo: DecodingAlgo,
+    /// Ratio (dB) of symbol energy to noise power spectral density at BPSK-AWGN channel output
+    pub es_over_n0_db: f64,
     /// Desired minimum number of block errors
     pub num_block_errors_min: u32,
     /// Number of blocks to be transmitted per run
@@ -83,8 +83,8 @@ impl SimParams {
     fn print(&self) {
         eprintln!();
         self.print_num_info_bits_per_block();
-        self.print_es_over_n0_db();
         self.print_decoding_algo();
+        self.print_es_over_n0_db();
         self.print_num_block_errors_min();
         self.print_num_blocks_per_run();
         self.print_num_runs_min();
@@ -99,14 +99,14 @@ impl SimParams {
         );
     }
 
-    /// Prints Es/N0 (dB) value.
-    fn print_es_over_n0_db(&self) {
-        eprintln!("Es/N0 of {} dB", self.es_over_n0_db);
-    }
-
     /// Prints decoding algorithm to use.
     fn print_decoding_algo(&self) {
         eprintln!("{}", self.decoding_algo);
+    }
+
+    /// Prints Es/N0 (dB) value.
+    fn print_es_over_n0_db(&self) {
+        eprintln!("Es/N0 of {} dB", self.es_over_n0_db);
     }
 
     /// Prints desired minimum number of block errors.
@@ -326,8 +326,8 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
 /// let mut rng = rand::thread_rng();
 /// let params = lte::SimParams {
 ///     num_info_bits_per_block: 40,
-///     es_over_n0_db: -3.0,
 ///     decoding_algo: DecodingAlgo::LogMAP(8),
+///     es_over_n0_db: -3.0,
 ///     num_block_errors_min: 10,
 ///     num_blocks_per_run: 10,
 ///     num_runs_min: 1,
@@ -377,8 +377,8 @@ pub fn bpsk_awgn_sim(params: &SimParams, rng: &mut ThreadRng) -> Result<SimResul
 /// for num_info_bits_per_block in [40, 48] {
 ///     all_params.push(lte::SimParams {
 ///         num_info_bits_per_block,
-///         es_over_n0_db: -3.0,
 ///         decoding_algo: DecodingAlgo::LogMAP(8),
+///         es_over_n0_db: -3.0,
 ///         num_block_errors_min: 100,
 ///         num_blocks_per_run: 100,
 ///         num_runs_min: 1,
@@ -768,8 +768,8 @@ mod tests_of_simparams {
         // Invalid input
         let params = SimParams {
             num_info_bits_per_block: 32,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 10,
             num_blocks_per_run: 1,
             num_runs_min: 1,
@@ -778,8 +778,8 @@ mod tests_of_simparams {
         assert!(params.check().is_err());
         let params = SimParams {
             num_info_bits_per_block: 40,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 10,
             num_blocks_per_run: 0,
             num_runs_min: 1,
@@ -788,8 +788,8 @@ mod tests_of_simparams {
         assert!(params.check().is_err());
         let params = SimParams {
             num_info_bits_per_block: 40,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 10,
             num_blocks_per_run: 1,
             num_runs_min: 2,
@@ -799,8 +799,8 @@ mod tests_of_simparams {
         // Valid input
         let params = SimParams {
             num_info_bits_per_block: 40,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 10,
             num_blocks_per_run: 1,
             num_runs_min: 1,
@@ -813,8 +813,8 @@ mod tests_of_simparams {
     fn test_print() {
         let params = SimParams {
             num_info_bits_per_block: 40,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 100,
             num_blocks_per_run: 1000,
             num_runs_min: 1,
@@ -832,8 +832,8 @@ mod tests_of_simresults {
     fn params_for_test() -> SimParams {
         SimParams {
             num_info_bits_per_block: 48,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 100,
             num_blocks_per_run: 1000,
             num_runs_min: 1,
@@ -961,8 +961,8 @@ mod tests_of_functions {
         // Invalid input
         let params = SimParams {
             num_info_bits_per_block: 32,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 10,
             num_blocks_per_run: 10,
             num_runs_min: 1,
@@ -972,8 +972,8 @@ mod tests_of_functions {
         // Valid input
         let params = SimParams {
             num_info_bits_per_block: 40,
-            es_over_n0_db: -3.0,
             decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
             num_block_errors_min: 10,
             num_blocks_per_run: 10,
             num_runs_min: 1,
@@ -988,8 +988,8 @@ mod tests_of_functions {
         let all_params = vec![
             SimParams {
                 num_info_bits_per_block: 32,
-                es_over_n0_db: -3.0,
                 decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                es_over_n0_db: -3.0,
                 num_block_errors_min: 20,
                 num_blocks_per_run: 10,
                 num_runs_min: 1,
@@ -997,8 +997,8 @@ mod tests_of_functions {
             },
             SimParams {
                 num_info_bits_per_block: 40,
-                es_over_n0_db: -3.0,
                 decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                es_over_n0_db: -3.0,
                 num_block_errors_min: 10,
                 num_blocks_per_run: 10,
                 num_runs_min: 1,
@@ -1019,8 +1019,8 @@ mod tests_of_functions {
             for es_over_n0_db in [-3.5, -3.0, -4.0] {
                 all_params.push(SimParams {
                     num_info_bits_per_block,
-                    es_over_n0_db,
                     decoding_algo: DecodingAlgo::LinearLogMAP(8),
+                    es_over_n0_db,
                     num_block_errors_min: 20,
                     num_blocks_per_run: 10,
                     num_runs_min: 1,

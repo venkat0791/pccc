@@ -44,11 +44,11 @@ fn command_line_parser() -> Command {
         .version(crate_version!())
         .about("Evaluates performance of rate-1/3 LTE PCCC over BPSK-AWGN channel")
         .arg(all_num_info_bits_per_block())
+        .arg(decoding_algo())
+        .arg(num_iter())
         .arg(first_snr_db())
         .arg(snr_step_db())
         .arg(num_snr())
-        .arg(decoding_algo())
-        .arg(num_iter())
         .arg(num_block_errors_min())
         .arg(num_blocks_per_run())
         .arg(num_runs_min())
@@ -64,6 +64,24 @@ fn all_num_info_bits_per_block() -> Arg {
         .num_args(0 ..)
         .default_values(["48", "96"])
         .help("All information block sizes of interest")
+}
+
+/// Returns argument for decoding algorithm to use.
+fn decoding_algo() -> Arg {
+    Arg::new("decoding_algo")
+        .short('a')
+        .value_parser(["LogMAP", "MaxLogMAP", "LinearLogMAP"])
+        .default_value("LinearLogMAP")
+        .help("Desired decoding algorithm")
+}
+
+/// Returns argument for number of decoder iterations.
+fn num_iter() -> Arg {
+    Arg::new("num_iter")
+        .short('t')
+        .value_parser(value_parser!(u32))
+        .default_value("8")
+        .help("Desired number of decoder iterations")
 }
 
 /// Returns argument for desired first Es/N0 (dB).
@@ -93,24 +111,6 @@ fn num_snr() -> Arg {
         .value_parser(value_parser!(u32))
         .default_value("11")
         .help("Desired number of Es/N0 values")
-}
-
-/// Returns argument for decoding algorithm to use.
-fn decoding_algo() -> Arg {
-    Arg::new("decoding_algo")
-        .short('a')
-        .value_parser(["LogMAP", "MaxLogMAP", "LinearLogMAP"])
-        .default_value("LinearLogMAP")
-        .help("Desired decoding algorithm")
-}
-
-/// Returns argument for number of decoder iterations.
-fn num_iter() -> Arg {
-    Arg::new("num_iter")
-        .short('t')
-        .value_parser(value_parser!(u32))
-        .default_value("8")
-        .help("Desired number of decoder iterations")
 }
 
 /// Returns argument for desired minimum number of block errors.
@@ -174,8 +174,8 @@ fn all_sim_params(matches: &ArgMatches) -> Vec<lte::SimParams> {
         for es_over_n0_db in all_es_over_n0_db_from_matches(matches) {
             all_params.push(lte::SimParams {
                 num_info_bits_per_block,
-                es_over_n0_db,
                 decoding_algo: decoding_algo_from_matches(matches),
+                es_over_n0_db,
                 num_block_errors_min: num_block_errors_min_from_matches(matches),
                 num_blocks_per_run: num_blocks_per_run_from_matches(matches),
                 num_runs_min,
@@ -197,16 +197,6 @@ fn all_num_info_bits_per_block_from_matches(matches: &ArgMatches) -> Vec<u32> {
         .collect()
 }
 
-/// Returns all Es/N0 (dB) values of interest.
-fn all_es_over_n0_db_from_matches(matches: &ArgMatches) -> Vec<f64> {
-    let first_snr_db: f64 = *matches.get_one("first_snr_db").unwrap();
-    let snr_step_db: f64 = *matches.get_one("snr_step_db").unwrap();
-    let num_snr: u32 = *matches.get_one("num_snr").unwrap();
-    (0 .. num_snr)
-        .map(|n| first_snr_db + snr_step_db * f64::from(n))
-        .collect()
-}
-
 /// Returns decoding algorithm to use.
 fn decoding_algo_from_matches(matches: &ArgMatches) -> DecodingAlgo {
     let num_iter = num_iter_from_matches(matches);
@@ -221,6 +211,16 @@ fn decoding_algo_from_matches(matches: &ArgMatches) -> DecodingAlgo {
 /// Returns number of decoder iterations.
 fn num_iter_from_matches(matches: &ArgMatches) -> u32 {
     *matches.get_one("num_iter").unwrap()
+}
+
+/// Returns all Es/N0 (dB) values of interest.
+fn all_es_over_n0_db_from_matches(matches: &ArgMatches) -> Vec<f64> {
+    let first_snr_db: f64 = *matches.get_one("first_snr_db").unwrap();
+    let snr_step_db: f64 = *matches.get_one("snr_step_db").unwrap();
+    let num_snr: u32 = *matches.get_one("num_snr").unwrap();
+    (0 .. num_snr)
+        .map(|n| first_snr_db + snr_step_db * f64::from(n))
+        .collect()
 }
 
 /// Returns desired minimum number of block errors.
@@ -261,16 +261,16 @@ mod tests {
             "-i",
             "48",
             "96",
+            "-a",
+            "LinearLogMAP",
+            "-t",
+            "8",
             "-r",
             "-4.0",
             "-p",
             "0.2",
             "-s",
             "6",
-            "-a",
-            "LinearLogMAP",
-            "-t",
-            "8",
             "-e",
             "50",
             "-b",
@@ -304,8 +304,8 @@ mod tests {
                 params.num_info_bits_per_block,
                 all_num_info_bits_per_block[idx / 6]
             );
-            assert_eq!(params.es_over_n0_db, all_es_over_n0_db[idx % 6]);
             assert_eq!(params.decoding_algo, DecodingAlgo::LinearLogMAP(8));
+            assert_eq!(params.es_over_n0_db, all_es_over_n0_db[idx % 6]);
             assert_eq!(params.num_block_errors_min, 50);
             assert_eq!(params.num_blocks_per_run, 100);
             assert_eq!(params.num_runs_min, 10);

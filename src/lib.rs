@@ -133,7 +133,12 @@ impl DecodingAlgo {
 
 impl fmt::Display for DecodingAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} decoding, {} iterations", self.name(), self.num_iter())
+        write!(
+            f,
+            "{} decoding, {} iterations",
+            self.name(),
+            self.num_iter()
+        )
     }
 }
 
