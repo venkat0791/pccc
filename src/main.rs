@@ -30,12 +30,7 @@ fn main() -> Result<()> {
     let mut rng = rand::thread_rng();
     let matches = command_line_parser().get_matches();
     let json_filename = &json_filename_from_matches(&matches);
-    lte::run_bpsk_awgn_sims(
-        &all_sim_params(&matches),
-        &mut rng,
-        json_filename,
-    )?;
-    lte::summarize_all_sim_results(json_filename)?;
+    lte::run_bpsk_awgn_sims(&all_sim_params(&matches), &mut rng, json_filename)?;
     eprintln!("Elapsed time: {:.3?}", timer.elapsed());
     Ok(())
 }

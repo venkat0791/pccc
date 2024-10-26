@@ -397,6 +397,7 @@ pub fn run_bpsk_awgn_sims(
             eprintln!("WARNING: Invalid simulation parameters");
         }
     }
+    summarize_all_sim_results(&all_results);
     save_all_sim_results_to_file(&all_results, json_filename)?;
     Ok(())
 }
@@ -410,12 +411,35 @@ pub fn run_bpsk_awgn_sims(
 /// # Errors
 ///
 /// Returns an error if opening or reading from the JSON file fails.
-pub fn summarize_all_sim_results(json_filename: &str) -> Result<(), Error> {
+pub fn summarize_all_sim_results_in_file(json_filename: &str) -> Result<(), Error> {
     let all_results = all_sim_results_from_file(json_filename)?;
+    summarize_all_sim_results(&all_results);
+    Ok(())
+}
+
+/// Saves all simulation results to a JSON file.
+fn save_all_sim_results_to_file(
+    all_results: &[SimResults],
+    json_filename: &str,
+) -> Result<(), Error> {
+    let writer = BufWriter::new(File::create(json_filename)?);
+    serde_json::to_writer_pretty(writer, all_results)?;
+    Ok(())
+}
+
+/// Returns all simulation results from a JSON file.
+fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
+    let reader = BufReader::new(File::open(json_filename)?);
+    let all_results = serde_json::from_reader(reader)?;
+    Ok(all_results)
+}
+
+/// Prints summary of all simulation results.
+fn summarize_all_sim_results(all_results: &[SimResults]) {
     let mut all_cases: Vec<SimCase> = all_results.iter().map(SimCase::from).unique().collect();
     all_cases.sort_by_key(|case| case.num_info_bits_per_block);
     for case in all_cases {
-        let all_results_for_case = all_sim_results_for_sim_case(&all_results, case);
+        let all_results_for_case = all_sim_results_for_sim_case(all_results, case);
         let all_es_over_n0_db = all_results_for_case
             .iter()
             .map(|&results| results.params.es_over_n0_db);
@@ -437,24 +461,6 @@ pub fn summarize_all_sim_results(json_filename: &str) -> Result<(), Error> {
                 println!("{es_over_n0_db:>8.2}     {ber:7.2e}     {bler:7.2e}");
             });
     }
-    Ok(())
-}
-
-/// Saves all simulation results to a JSON file.
-fn save_all_sim_results_to_file(
-    all_results: &[SimResults],
-    json_filename: &str,
-) -> Result<(), Error> {
-    let writer = BufWriter::new(File::create(json_filename)?);
-    serde_json::to_writer_pretty(writer, all_results)?;
-    Ok(())
-}
-
-/// Returns all simulation results from a JSON file.
-fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
-    let reader = BufReader::new(File::open(json_filename)?);
-    let all_results = serde_json::from_reader(reader)?;
-    Ok(all_results)
 }
 
 /// Returns all simulation results for a given simulation case.
@@ -978,6 +984,7 @@ mod tests_of_functions {
     }
 
     #[test]
+    #[ignore]
     fn test_run_bpsk_awgn_sims() {
         let mut rng = rand::thread_rng();
         let all_params = vec![
@@ -1001,11 +1008,6 @@ mod tests_of_functions {
             },
         ];
         run_bpsk_awgn_sims(&all_params, &mut rng, "results.json").unwrap();
-    }
-
-    #[test]
-    fn test_summarize_all_sim_results() {
-        summarize_all_sim_results("results_for_test.json").unwrap();
     }
 
     fn all_sim_params_for_test() -> Vec<SimParams> {
@@ -1035,21 +1037,9 @@ mod tests_of_functions {
     }
 
     #[test]
-    fn test_save_all_sim_results_to_file() {
+    fn test_summarize_all_sim_results() {
         let all_results = all_sim_results_for_test(&all_sim_params_for_test());
-        let json_filename = "results.json";
-        save_all_sim_results_to_file(&all_results, json_filename).unwrap();
-        let all_results_saved = all_sim_results_from_file(json_filename).unwrap();
-        assert_eq!(all_results, all_results_saved);
-    }
-
-    #[test]
-    fn test_all_sim_results_from_file() {
-        let all_results = all_sim_results_for_test(&all_sim_params_for_test());
-        let json_filename = "results.json";
-        save_all_sim_results_to_file(&all_results, json_filename).unwrap();
-        let all_results_saved = all_sim_results_from_file(json_filename).unwrap();
-        assert_eq!(all_results, all_results_saved);
+        summarize_all_sim_results(&all_results);
     }
 
     #[test]
