@@ -43,9 +43,9 @@ fn command_line_parser() -> Command {
     Command::new(crate_name!())
         .version(crate_version!())
         .about("Evaluates performance of rate-1/3 LTE PCCC over BPSK-AWGN channel")
-        .arg(all_num_info_bits_per_block())
-        .arg(decoding_algo())
-        .arg(num_iter())
+        .arg(num_info_bits_per_block())
+        .arg(decoding_algo_name())
+        .arg(num_decoding_iter())
         .arg(first_snr_db())
         .arg(snr_step_db())
         .arg(num_snr())
@@ -56,61 +56,60 @@ fn command_line_parser() -> Command {
         .arg(json_filename())
 }
 
-/// Returns argument for all information block sizes of interest.
-fn all_num_info_bits_per_block() -> Arg {
-    Arg::new("all_num_info_bits_per_block")
+/// Returns argument for number of information bits per block.
+fn num_info_bits_per_block() -> Arg {
+    Arg::new("num_info_bits_per_block")
         .short('i')
         .value_parser(value_parser!(u32))
-        .num_args(0 ..)
-        .default_values(["48", "96"])
-        .help("All information block sizes of interest")
+        .default_value("40")
+        .help("Number of information bits per block")
 }
 
-/// Returns argument for decoding algorithm to use.
-fn decoding_algo() -> Arg {
-    Arg::new("decoding_algo")
+/// Returns argument for decoding algorithm name.
+fn decoding_algo_name() -> Arg {
+    Arg::new("decoding_algo_name")
         .short('a')
         .value_parser(["LogMAP", "MaxLogMAP", "LinearLogMAP"])
-        .default_value("LinearLogMAP")
-        .help("Desired decoding algorithm")
+        .default_value("LogMAP")
+        .help("Decoding algorithm name")
 }
 
-/// Returns argument for number of decoder iterations.
-fn num_iter() -> Arg {
-    Arg::new("num_iter")
+/// Returns argument for number of decoding iterations.
+fn num_decoding_iter() -> Arg {
+    Arg::new("num_decoding_iter")
         .short('t')
         .value_parser(value_parser!(u32))
         .default_value("8")
-        .help("Desired number of decoder iterations")
+        .help("Number of decoding iterations")
 }
 
-/// Returns argument for desired first Es/N0 (dB).
+/// Returns argument for first Es/N0 (dB).
 fn first_snr_db() -> Arg {
     Arg::new("first_snr_db")
         .short('r')
         .value_parser(value_parser!(f64))
         .allow_negative_numbers(true)
         .default_value("-5.0")
-        .help("Desired first Es/N0 (dB)")
+        .help("First Es/N0 (dB)")
 }
 
-/// Returns argument for desired Es/N0 step (dB).
+/// Returns argument for Es/N0 step (dB).
 fn snr_step_db() -> Arg {
     Arg::new("snr_step_db")
         .short('p')
         .value_parser(value_parser!(f64))
         .allow_negative_numbers(true)
         .default_value("0.1")
-        .help("Desired Es/N0 step (dB)")
+        .help("Es/N0 step (dB)")
 }
 
-/// Returns argument for desired number of Es/N0 values.
+/// Returns argument for number of Es/N0 values.
 fn num_snr() -> Arg {
     Arg::new("num_snr")
         .short('s')
         .value_parser(value_parser!(u32))
         .default_value("11")
-        .help("Desired number of Es/N0 values")
+        .help("Number of Es/N0 values")
 }
 
 /// Returns argument for desired minimum number of block errors.
@@ -149,7 +148,7 @@ fn num_runs_max() -> Arg {
         .help("Maximum number of runs of blocks to be simulated")
 }
 
-/// Returns argument for name of JSON file for results.
+/// Returns argument for name of JSON file to which results must be saved.
 fn json_filename() -> Arg {
     Arg::new("json_filename")
         .short('f')
@@ -170,50 +169,43 @@ fn all_sim_params(matches: &ArgMatches) -> Vec<lte::SimParams> {
         }
     }
     let mut all_params = Vec::new();
-    for num_info_bits_per_block in all_num_info_bits_per_block_from_matches(matches) {
-        for es_over_n0_db in all_es_over_n0_db_from_matches(matches) {
-            all_params.push(lte::SimParams {
-                num_info_bits_per_block,
-                decoding_algo: decoding_algo_from_matches(matches),
-                es_over_n0_db,
-                num_block_errors_min: num_block_errors_min_from_matches(matches),
-                num_blocks_per_run: num_blocks_per_run_from_matches(matches),
-                num_runs_min,
-                num_runs_max,
-            });
-        }
+    for es_over_n0_db in all_es_over_n0_db_from_matches(matches) {
+        all_params.push(lte::SimParams {
+            num_info_bits_per_block: num_info_bits_per_block_from_matches(matches),
+            decoding_algo: decoding_algo_from_matches(matches),
+            es_over_n0_db,
+            num_block_errors_min: num_block_errors_min_from_matches(matches),
+            num_blocks_per_run: num_blocks_per_run_from_matches(matches),
+            num_runs_min,
+            num_runs_max,
+        });
     }
     // OK to unwrap: All command-line arguments have default values, so an error cannot occur
     // in any of the associated functions called above.
     all_params
 }
 
-/// Returns all information block sizes of interest.
-fn all_num_info_bits_per_block_from_matches(matches: &ArgMatches) -> Vec<u32> {
-    matches
-        .get_many("all_num_info_bits_per_block")
-        .unwrap()
-        .copied()
-        .collect()
+/// Returns number of information bits per block.
+fn num_info_bits_per_block_from_matches(matches: &ArgMatches) -> u32 {
+    *matches.get_one("num_info_bits_per_block").unwrap()
 }
 
-/// Returns decoding algorithm to use.
+/// Returns decoding algorithm.
 fn decoding_algo_from_matches(matches: &ArgMatches) -> DecodingAlgo {
-    let num_iter = num_iter_from_matches(matches);
-    match matches.get_one::<String>("decoding_algo").unwrap().as_str() {
+    let num_iter = *matches.get_one("num_decoding_iter").unwrap();
+    match matches
+        .get_one::<String>("decoding_algo_name")
+        .unwrap()
+        .as_str()
+    {
         "LogMAP" => DecodingAlgo::LogMAP(num_iter),
         "MaxLogMAP" => DecodingAlgo::MaxLogMAP(num_iter),
         "LinearLogMAP" => DecodingAlgo::LinearLogMAP(num_iter),
-        _ => panic!("Invalid decoding algorithm"),
+        _ => panic!("Invalid decoding algorithm name"),
     }
 }
 
-/// Returns number of decoder iterations.
-fn num_iter_from_matches(matches: &ArgMatches) -> u32 {
-    *matches.get_one("num_iter").unwrap()
-}
-
-/// Returns all Es/N0 (dB) values of interest.
+/// Returns all Es/N0 (dB) values.
 fn all_es_over_n0_db_from_matches(matches: &ArgMatches) -> Vec<f64> {
     let first_snr_db: f64 = *matches.get_one("first_snr_db").unwrap();
     let snr_step_db: f64 = *matches.get_one("snr_step_db").unwrap();
@@ -243,7 +235,7 @@ fn num_runs_max_from_matches(matches: &ArgMatches) -> u32 {
     *matches.get_one("num_runs_max").unwrap()
 }
 
-/// Returns name of JSON file for results.
+/// Returns name of JSON file to which simulation results must be saved.
 fn json_filename_from_matches(matches: &ArgMatches) -> String {
     matches
         .get_one::<String>("json_filename")
@@ -259,10 +251,9 @@ mod tests {
         vec![
             crate_name!(),
             "-i",
-            "48",
-            "96",
+            "40",
             "-a",
-            "LinearLogMAP",
+            "LogMAP",
             "-t",
             "8",
             "-r",
@@ -296,16 +287,12 @@ mod tests {
     fn test_all_sim_params() {
         let matches = command_line_parser().get_matches_from(command_line_for_test());
         let all_params = all_sim_params(&matches);
-        let all_num_info_bits_per_block = [48, 96];
         let all_es_over_n0_db = [-4.0, -3.8, -3.6, -3.4, -3.2, -3.0];
-        assert_eq!(all_params.len(), 12);
+        assert_eq!(all_params.len(), 6);
         for (idx, &params) in all_params.iter().enumerate() {
-            assert_eq!(
-                params.num_info_bits_per_block,
-                all_num_info_bits_per_block[idx / 6]
-            );
-            assert_eq!(params.decoding_algo, DecodingAlgo::LinearLogMAP(8));
-            assert_eq!(params.es_over_n0_db, all_es_over_n0_db[idx % 6]);
+            assert_eq!(params.num_info_bits_per_block, 40);
+            assert_eq!(params.decoding_algo, DecodingAlgo::LogMAP(8));
+            assert_eq!(params.es_over_n0_db, all_es_over_n0_db[idx]);
             assert_eq!(params.num_block_errors_min, 50);
             assert_eq!(params.num_blocks_per_run, 100);
             assert_eq!(params.num_runs_min, 10);
