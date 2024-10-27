@@ -39,7 +39,7 @@ fn main() -> Result<()> {
 fn command_line_parser() -> Command {
     Command::new(crate_name!())
         .version(crate_version!())
-        .about("Evaluates performance of rate-1/3 LTE PCCC over BPSK-AWGN channel")
+        .about("Evaluates the performance of the rate-1/3 LTE PCCC over a BPSK-AWGN channel")
         .arg(num_info_bits_per_block())
         .arg(decoding_algo_name())
         .arg(num_decoding_iter())

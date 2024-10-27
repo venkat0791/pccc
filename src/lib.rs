@@ -1,17 +1,21 @@
 //! # Parallel-concatenated convolutional code (PCCC)
 //!
 //! This crate implements encoding and decoding functionality for a _parallel-concatenated
-//! convolutional code_ (PCCC), commonly referred to as a turbo code. The encoder for such a code
-//! comprises the parallel concatenation of two identical _recursive systematic convolutional_ (RSC)
-//! encoders, separated by an internal interleaver. The decoder is based on iterations between two
-//! corresponding soft-input/soft-output _a posteriori probability_ (APP) decoders, separated by an
-//! interleaver and deinterleaver.
+//! convolutional code_ (PCCC), commonly referred to as a
+//! [turbo code](https://en.wikipedia.org/wiki/Turbo_code). An instance of such a code is
+//! used for forward error correction in the 4G LTE standard for wireless broadband communication
+//! (see [3GPP TS 36.212](https://www.3gpp.org/ftp/Specs/archive/36_series/36.212/)).
+//!
+//! The encoder for a PCCC comprises the parallel concatenation of two identical _recursive
+//! systematic convolutional_ (RSC) encoders, separated by an internal interleaver. The decoder is
+//! based on iterations between two corresponding soft-input/soft-output _a posteriori probability_
+//! (APP) decoders, separated by an interleaver and deinterleaver.
 //!
 //! The [`encoder`] and [`decoder`] functions handle PCCC encoding and decoding, respectively,
-//! while the [`Interleaver`] struct models the internal interleaver. The [`Bit`] enum represents
-//! binary symbol values, and the [`DecodingAlgo`] enum lists the supported decoding algorithms for
-//! the constituent RSC code; each variant of the latter holds a [`u32`] representing the desired
-//! number of turbo iterations.
+//! while the [`Interleaver`] struct models the internal interleaver and associated deinterleaver.
+//! The [`Bit`] enum represents binary symbol values, and the [`DecodingAlgo`] enum lists the
+//! supported decoding algorithms; each variant of the latter holds a [`u32`] representing the
+//! number of turbo iterations. The code below illustrates their usage through a toy example.
 //!
 //! # Examples
 //!
@@ -19,7 +23,7 @@
 //! use pccc::{decoder, encoder, Bit, DecodingAlgo, Interleaver};
 //! use Bit::{One, Zero};
 //!
-//! // Rate-1/3 PCCC in LTE, 4 information bits
+//! // Rate-1/3 PCCC in LTE, 4 information bits, Log-MAP decoding (8 iterations)
 //! let code_polynomials = [0o13, 0o15];
 //! let interleaver = Interleaver::new(&[3, 0, 1, 2])?;
 //! // Encoding
@@ -42,10 +46,17 @@
 //!     &interleaver,
 //!     &code_polynomials,
 //!     DecodingAlgo::LogMAP(8),
-//! )?; // Log-MAP decoding with 8 turbo iterations
+//! )?;
 //! assert_eq!(info_bits_hat, [One, Zero, Zero, One]);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
+//!
+//! The [`lte`] module contains encoder and decoder functions specifically for the rate-1/3 PCCC
+//! used in the LTE standard; the block size is restricted to the values in Table 5.1.3-3 of 3GPP
+//! TS 36.212 (from 40 to 6144 bits), and the interleaver for each of these block sizes is
+//! automatically set to the prescribed _quadratic permutation polynomial_ (QPP) interleaver. This
+//! module also has functions to evaluate the performance of the LTE PCCC over a BPSK-AWGN channel
+//! by simulation. Finally, the [`utils`] module has some useful functions for such a simulation.
 
 #![warn(
     clippy::complexity,
