@@ -1,6 +1,9 @@
 //! This crate simulates the BER-versus-SNR and BLER-versus-SNR performance of the rate-1/3
 //! parallel-concatenated convolutional code (PCCC) in LTE over a BPSK-AWGN channel. Simulation
 //! parameters are specified on the command line, and simulation results are saved to a JSON file.
+//!
+//! Build the executable with `cargo build --release` and then run `./target/release/pccc -h` for
+//! help on the command-line interface.
 
 #![warn(
     clippy::complexity,
