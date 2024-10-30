@@ -35,7 +35,7 @@ Options:
 The bit error rate (BER) and block error rate (BLER) versus the signal-to-noise ratio (SNR) are shown below for a block size of 1536 bits and Log-MAP decoding with 8 iterations:
 
  | Es/N0 (dB) |    BER    |    BLER    |
- |------------|-----------|------------|
+ |:----------:|:---------:|:----------:|
  |  -5.00     |  1.09e-1  |   9.65e-1  |
  |  -4.90     |  8.79e-2  |   9.00e-1  |
  |  -4.80     |  6.54e-2  |   7.86e-1  |
