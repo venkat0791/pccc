@@ -1,12 +1,10 @@
-# pccc
+# Overview
 
-## Overview
-
-This package implements encoding and decoding functionality for a _parallel-concatenated convolutional code_ (PCCC), commonly referred to as a [turbo code](https://en.wikipedia.org/wiki/Turbo_code). An instance of such a code is used for forward error correction in the 4G LTE standard for wireless broadband communication (see [3GPP TS 36.212](https://www.3gpp.org/ftp/Specs/archive/36_series/36.212/)).
+The [pccc](https://github.com/venkat0791/pccc) package implements encoding and decoding functionality for a _parallel-concatenated convolutional code_ (PCCC), commonly referred to as a [turbo code](https://en.wikipedia.org/wiki/Turbo_code). An instance of such a code is used for forward error correction in the 4G LTE standard for wireless broadband communication (see [3GPP TS 36.212](https://www.3gpp.org/ftp/Specs/archive/36_series/36.212/)).
 
 The package contains both a library crate and a binary crate. Refer to the [API documentation](https://docs.rs/pccc) for more details on the library crate (including illustrative examples). Read on for more on the binary crate.
 
-## Binary crate usage
+# Binary crate usage
 
 The included binary crate can be used to evaluate (by Monte Carlo simulation) the error rate performance of the rate-1/3 PCCC in LTE over a BPSK-AWGN channel. Simulation parameters are specified on the command line, and simulation results are saved to a JSON file.
 
@@ -36,10 +34,10 @@ Options:
 
 ## Example
 
-To evaluate the bit error rate (BER) and block error rate (BLER) for a block size of 1536 bits with Log-MAP decoding and 8 decoding iterations, for signal-to-noise ratio (Es/N0) values from -5 dB to -4 dB in 0.1 dB steps, run the following command (some parameters are left at their default values):
+The following command runs a simulation to evaluate the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 1536 bits, with Log-MAP decoding and 8 decoding iterations. The signal-to-noise ratio (Es/N0) ranges from -5 dB to -4 dB in 0.1 dB steps. Results are saved to a file named results1536.json (some parameters are left at their default values).
 
 ```console
-$ ./target/release/pccc -i 1536 -a LogMAP -t 8 -r -5.0 -p 0.1 -s 11 -f results_1536bits.json
+$ ./target/release/pccc -i 1536 -a LogMAP -t 8 -r -5.0 -p 0.1 -s 11 -f results1536.json
 ```
 
 The results obtained from a simulation with the above parameters are tabulated below:
