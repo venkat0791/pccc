@@ -4,11 +4,13 @@
 
 This package implements encoding and decoding functionality for a _parallel-concatenated convolutional code_ (PCCC), commonly referred to as a [turbo code](https://en.wikipedia.org/wiki/Turbo_code). An instance of such a code is used for forward error correction in the 4G LTE standard for wireless broadband communication (see [3GPP TS 36.212](https://www.3gpp.org/ftp/Specs/archive/36_series/36.212/)).
 
-The package contains both a library crate and a binary crate. Refer to the [API documentation](https://docs.rs/pccc) for more details on the library crate (including illustrative examples). The binary crate evaluates (by simulation) the error rate performance of the rate-1/3 PCCC in LTE over a BPSK-AWGN channel. Simulation parameters are specified on the command line, and simulation results are saved to a JSON file. See below for further details.
+The package contains both a library crate and a binary crate. Refer to the [API documentation](https://docs.rs/pccc) for more details on the library crate (including illustrative examples). Read on for more on the binary crate.
 
-## Usage
+## Binary crate usage
 
-Build the executable with `cargo build --release` and then run `./target/release/pccc -h` for help on the command-line interface.
+The included binary crate can be used to evaluate (by Monte Carlo simulation) the error rate performance of the rate-1/3 PCCC in LTE over a BPSK-AWGN channel. Simulation parameters are specified on the command line, and simulation results are saved to a JSON file.
+
+Build the executable with `cargo build --release` and then run `./target/release/pccc -h` for help on the command-line interface:
 
 ```console
 $ ./target/release/pccc -h
@@ -32,20 +34,28 @@ Options:
   -V, --version                     Print version
 ```
 
-The bit error rate (BER) and block error rate (BLER) versus the signal-to-noise ratio (SNR) are shown below for a block size of 1536 bits and Log-MAP decoding with 8 iterations:
+## Example
+
+To evaluate the bit error rate (BER) and block error rate (BLER) for a block size of 1536 bits with Log-MAP decoding and 8 decoding iterations, for signal-to-noise ratio (Es/N0) values from -5 dB to -4 dB in 0.1 dB steps, run the following command (some parameters are left at their default values):
+
+```console
+$ ./target/release/pccc -i 1536 -a LogMAP -t 8 -r -5.0 -p 0.1 -s 11 -f results_1536bits.json
+```
+
+The results obtained from a simulation with the above parameters are tabulated below:
 
  | Es/N0 (dB) |    BER    |    BLER    |
  |:----------:|:---------:|:----------:|
- |  -5.00     |  1.09e-1  |   9.65e-1  |
- |  -4.90     |  8.79e-2  |   9.00e-1  |
- |  -4.80     |  6.54e-2  |   7.86e-1  |
- |  -4.70     |  4.27e-2  |   6.12e-1  |
- |  -4.60     |  2.48e-2  |   4.15e-1  |
- |  -4.50     |  1.20e-2  |   2.44e-1  |
- |  -4.40     |  4.97e-3  |   1.15e-1  |
- |  -4.30     |  1.67e-3  |   4.23e-2  |
- |  -4.20     |  5.05e-4  |   1.55e-2  |
- |  -4.10     |  1.31e-4  |   4.39e-3  |
- |  -4.00     |  2.78e-5  |   1.06e-3  |
+ |  -5.0      |  1.09e-1  |   9.65e-1  |
+ |  -4.9      |  8.79e-2  |   9.00e-1  |
+ |  -4.8      |  6.54e-2  |   7.86e-1  |
+ |  -4.7      |  4.27e-2  |   6.12e-1  |
+ |  -4.6      |  2.48e-2  |   4.15e-1  |
+ |  -4.5      |  1.20e-2  |   2.44e-1  |
+ |  -4.4      |  4.97e-3  |   1.15e-1  |
+ |  -4.3      |  1.67e-3  |   4.23e-2  |
+ |  -4.2      |  5.05e-4  |   1.55e-2  |
+ |  -4.1      |  1.31e-4  |   4.39e-3  |
+ |  -4.0      |  2.78e-5  |   1.06e-3  |
 
 License: MIT
