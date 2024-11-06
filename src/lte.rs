@@ -10,7 +10,7 @@
 //!
 //! This example shows how to encode 40 information bits with the LTE PCCC, pass the resulting code
 //! bits through a BPSK-AWGN channel at an SNR of -3 dB, and decode the resulting channel output
-//! with 8 iterations of the Log-MAP algorithm:
+//! with the Log-MAP algorithm and 8 turbo iterations:
 //! ```
 //! use pccc::{lte, utils, DecodingAlgo};
 //! let mut rng = rand::thread_rng();
