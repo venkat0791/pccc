@@ -45,7 +45,7 @@ fn command_line_parser() -> Command {
         .about("Evaluates the performance of the rate-1/3 LTE PCCC over a BPSK-AWGN channel")
         .arg(num_info_bits_per_block())
         .arg(decoding_algo_name())
-        .arg(num_decoding_iter())
+        .arg(num_turbo_iter())
         .arg(first_snr_db())
         .arg(snr_step_db())
         .arg(num_snr())
@@ -74,13 +74,13 @@ fn decoding_algo_name() -> Arg {
         .help("Decoding algorithm name")
 }
 
-/// Returns argument for number of decoding iterations.
-fn num_decoding_iter() -> Arg {
-    Arg::new("num_decoding_iter")
+/// Returns argument for number of turbo iterations.
+fn num_turbo_iter() -> Arg {
+    Arg::new("num_turbo_iter")
         .short('t')
         .value_parser(value_parser!(u32))
         .default_value("8")
-        .help("Number of decoding iterations")
+        .help("Number of turbo iterations")
 }
 
 /// Returns argument for first Es/N0 (dB).
@@ -192,15 +192,15 @@ fn num_info_bits_per_block_from_matches(matches: &ArgMatches) -> u32 {
 
 /// Returns decoding algorithm.
 fn decoding_algo_from_matches(matches: &ArgMatches) -> DecodingAlgo {
-    let num_iter = *matches.get_one("num_decoding_iter").unwrap();
+    let num_turbo_iter = *matches.get_one("num_turbo_iter").unwrap();
     match matches
         .get_one::<String>("decoding_algo_name")
         .unwrap()
         .as_str()
     {
-        "LogMAP" => DecodingAlgo::LogMAP(num_iter),
-        "MaxLogMAP" => DecodingAlgo::MaxLogMAP(num_iter),
-        "LinearLogMAP" => DecodingAlgo::LinearLogMAP(num_iter),
+        "LogMAP" => DecodingAlgo::LogMAP(num_turbo_iter),
+        "MaxLogMAP" => DecodingAlgo::MaxLogMAP(num_turbo_iter),
+        "LinearLogMAP" => DecodingAlgo::LinearLogMAP(num_turbo_iter),
         _ => panic!("Invalid decoding algorithm name"),
     }
 }
