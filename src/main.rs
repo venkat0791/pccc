@@ -99,7 +99,7 @@ fn snr_step_db() -> Arg {
         .short('p')
         .value_parser(value_parser!(f64))
         .allow_negative_numbers(true)
-        .default_value("0.1")
+        .default_value("1.0")
         .help("Es/N0 step (dB)")
 }
 
@@ -108,7 +108,7 @@ fn num_snr() -> Arg {
     Arg::new("num_snr")
         .short('s')
         .value_parser(value_parser!(u32))
-        .default_value("11")
+        .default_value("4")
         .help("Number of Es/N0 values")
 }
 
