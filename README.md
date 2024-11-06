@@ -1,14 +1,14 @@
 # Overview
 
-The [pccc](https://github.com/venkat0791/pccc) package implements encoding and decoding functionality for a _parallel-concatenated convolutional code_ (PCCC), commonly referred to as a [turbo code](https://en.wikipedia.org/wiki/Turbo_code). An instance of such a code is used for forward error correction in the 4G LTE standard for wireless broadband communication (see [3GPP TS 36.212](https://www.3gpp.org/ftp/Specs/archive/36_series/36.212/)).
+This package implements encoding and decoding functionality for a _parallel-concatenated convolutional code_ (PCCC), commonly referred to as a [turbo code](https://en.wikipedia.org/wiki/Turbo_code). An instance of such a code is used for forward error correction in the 4G LTE standard for wireless broadband communication (see [3GPP TS 36.212](https://www.3gpp.org/ftp/Specs/archive/36_series/36.212/)).
 
-The package contains both a library crate and a binary crate. Refer to the [API documentation](https://docs.rs/pccc) for more details on the library crate (including illustrative examples). Read on for more on the binary crate.
+The package comprises a library crate and a binary crate. Refer to the [API documentation](https://docs.rs/pccc) for more details on the former (including illustrative examples), and read on for more on the latter.
 
 # Binary crate usage
 
-The included binary crate can be used to evaluate (by Monte Carlo simulation) the error rate performance of the rate-1/3 PCCC in LTE over a BPSK-AWGN channel. Simulation parameters are specified on the command line, and simulation results are saved to a JSON file.
+The included binary crate can be used to run a Monte Carlo simulation that evaluates the error rate performance of the rate-1/3 LTE PCCC over a BPSK-AWGN channel. The parameters for such a simulation are specified on the command line, and the results from it are saved to a JSON file.
 
-Build the executable with `cargo build --release` and then run `./target/release/pccc -h` for help on the command-line interface:
+Build the executable in release mode with `cargo build --release` and then run `./target/release/pccc -h` for help on the command-line interface:
 
 ```console
 $ ./target/release/pccc -h
@@ -19,7 +19,7 @@ Usage: pccc [OPTIONS]
 Options:
   -i <num_info_bits_per_block>      Number of information bits per block [default: 40]
   -a <decoding_algo_name>           Decoding algorithm name [default: LogMAP] [possible values: LogMAP, MaxLogMAP, LinearLogMAP]
-  -t <num_decoding_iter>            Number of decoding iterations [default: 8]
+  -t <num_turbo_iter>               Number of turbo iterations [default: 8]
   -r <first_snr_db>                 First Es/N0 (dB) [default: -5.0]
   -p <snr_step_db>                  Es/N0 step (dB) [default: 0.1]
   -s <num_snr>                      Number of Es/N0 values [default: 11]
@@ -34,13 +34,13 @@ Options:
 
 ## Example
 
-The following command runs a simulation to evaluate the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 1536 bits, with Log-MAP decoding and 8 decoding iterations. The signal-to-noise ratio (Es/N0) ranges from -5 dB to -4 dB in 0.1 dB steps. Results are saved to a file named results1536.json (some parameters are left at their default values).
+The following command runs a simulation to evaluate the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 1536 bits, with Log-MAP decoding and 8 turbo iterations. The signal-to-noise ratio (Es/N0) ranges from -5 dB to -4 dB in 0.1 dB steps. Results are saved to a file named results1536.json (some parameters are left at their default values).
 
 ```console
 $ ./target/release/pccc -i 1536 -a LogMAP -t 8 -r -5.0 -p 0.1 -s 11 -f results1536.json
 ```
 
-The results obtained from a simulation with the above parameters are tabulated below:
+For reference, the BER and BLER from a simulation with the above parameters are tabulated below:
 
  | Es/N0 (dB) |    BER    |    BLER    |
  |:----------:|:---------:|:----------:|
