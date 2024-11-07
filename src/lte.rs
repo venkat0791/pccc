@@ -13,13 +13,16 @@
 //! with the Log-MAP algorithm and 8 turbo iterations:
 //! ```
 //! use pccc::{lte, utils, DecodingAlgo};
+//!
 //! let mut rng = rand::thread_rng();
 //! let num_info_bits = 40;
 //! let es_over_n0_db = -3.0;
+//! let decoding_algo = DecodingAlgo::LogMAP(8);
+//!
 //! let info_bits = utils::random_bits(num_info_bits, &mut rng);
 //! let code_bits = lte::encoder(&info_bits)?;
 //! let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, es_over_n0_db, &mut rng);
-//! let info_bits_hat = lte::decoder(&code_bits_llr, DecodingAlgo::LogMAP(8))?;
+//! let info_bits_hat = lte::decoder(&code_bits_llr, decoding_algo)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 

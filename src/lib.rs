@@ -455,6 +455,7 @@ pub fn encoder(
 ///
 /// let code_polynomials = [0o13, 0o15]; // Rate-1/3 PCCC in LTE
 /// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // 4 information bits
+/// let decoding_algo = DecodingAlgo::LogMAP(8); // Log-MAP decoding, 8 turbo iterations
 /// let code_bits_llr = [
 ///     -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
 ///     1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0,
@@ -463,8 +464,8 @@ pub fn encoder(
 ///     &code_bits_llr,
 ///     &interleaver,
 ///     &code_polynomials,
-///     DecodingAlgo::LogMAP(8),
-/// )?; // Log-MAP decoding with 8 turbo iterations
+///     decoding_algo,
+/// )?;
 /// assert_eq!(info_bits_hat, [One, Zero, Zero, One]);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
