@@ -463,9 +463,11 @@ pub(crate) fn encode(
 ///
 /// # Parameters
 ///
-/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
+/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits, with positive values
+///   indicating that `Zero` is more likely.
 ///
-/// - `info_bits_llr_prior`: Prior LLR values for the information bits.
+/// - `info_bits_llr_prior`: Prior LLR values for the information bits, with positive values
+///   indicating that `Zero` is more likely.
 ///
 /// - `state_machine`: State machine for the RSC decoder.
 ///

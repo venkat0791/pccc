@@ -267,7 +267,8 @@ pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
 ///
 /// # Parameters
 ///
-/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits.
+/// - `code_bits_llr`: Log-likelihood-ratio (LLR) values for the code bits, with positive values
+///   indicating that `Zero` is more likely.
 ///
 /// - `decoding_algo`: Decoding algorithm to use, and associated number of turbo iterations.
 ///

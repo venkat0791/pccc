@@ -62,7 +62,7 @@ pub fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
 /// # Returns
 ///
 /// - `bits_llr`: Log-likelihood-ratio (LLR) values at the BPSK-AWGN channel output corresponding
-///   to the transmitted bits.
+///   to the transmitted bits, with positive values indicating that `Zero` is more likely.
 pub fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64, rng: &mut ThreadRng) -> Vec<f64> {
     let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
     let noise_var = 0.5 / es_over_n0;
@@ -79,7 +79,8 @@ pub fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64, rng: &mut ThreadRng) 
 ///
 /// # Parameters
 ///
-/// - `syms`: Symbols to be sliced.
+/// - `syms`: Symbols to be sliced. Nonnegative values are mapped to `Zero`, and negative values to
+///   `One`.
 ///
 /// # Returns
 ///
