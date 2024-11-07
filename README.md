@@ -12,7 +12,7 @@ Build the executable in release mode with `cargo build --release` and then run `
 
 ```console
 $ ./target/release/pccc -h
-Evaluates performance of rate-1/3 LTE PCCC over BPSK-AWGN channel
+Evaluates the performance of the rate-1/3 LTE PCCC over a BPSK-AWGN channel
 
 Usage: pccc [OPTIONS]
 
