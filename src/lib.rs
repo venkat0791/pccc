@@ -26,6 +26,7 @@
 //! // Rate-1/3 PCCC in LTE, 4 information bits, Log-MAP decoding (8 turbo iterations)
 //! let code_polynomials = [0o13, 0o15];
 //! let interleaver = Interleaver::new(&[3, 0, 1, 2])?;
+//! let decoding_algo = DecodingAlgo::LogMAP(8);
 //!
 //! // Encoding
 //! let info_bits = [One, Zero, Zero, One];
@@ -47,7 +48,7 @@
 //!     &code_bits_llr,
 //!     &interleaver,
 //!     &code_polynomials,
-//!     DecodingAlgo::LogMAP(8),
+//!     decoding_algo,
 //! )?;
 //! assert_eq!(info_bits_hat, [One, Zero, Zero, One]);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
