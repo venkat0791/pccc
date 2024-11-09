@@ -1,7 +1,7 @@
 # Changelog
 
 ## pccc 0.2.0 (2025-11-06)
-[41389c4...HEAD](https://github.com/venkat0791/pccc/compare/41389c4...HEAD)
+[41389c4...fdd6639](https://github.com/venkat0791/pccc/compare/41389c4...fdd6639)
 
 ### Added
 
