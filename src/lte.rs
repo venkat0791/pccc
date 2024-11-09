@@ -65,7 +65,7 @@ impl SimParams {
         if qpp_coefficients(self.num_info_bits_per_block as usize).is_err() {
             return Err(Error::InvalidInput(format!(
                 "{} is not a valid number of information bits per block",
-                self.num_info_bits_per_block,
+                self.num_info_bits_per_block
             )));
         }
         if self.num_blocks_per_run == 0 {
@@ -76,7 +76,7 @@ impl SimParams {
         if self.num_runs_min > self.num_runs_max {
             return Err(Error::InvalidInput(format!(
                 "Minimum number of runs ({}) exceeds maximum number of runs ({})",
-                self.num_runs_min, self.num_runs_max,
+                self.num_runs_min, self.num_runs_max
             )));
         }
         Ok(())
@@ -286,7 +286,8 @@ pub fn encoder(info_bits: &[Bit]) -> Result<Vec<Bit>, Error> {
 pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec<Bit>, Error> {
     if code_bits_llr.len() < NUM_TAIL_CODE_BITS {
         return Err(Error::InvalidInput(format!(
-            "Must have a minimum of {NUM_TAIL_CODE_BITS} code bit LLR values",
+            "Expected a minimum of {NUM_TAIL_CODE_BITS} code bit LLR values (found {})",
+            code_bits_llr.len()
         )));
     }
     let num_info_bits = (code_bits_llr.len() - NUM_TAIL_CODE_BITS) / INVERSE_CODE_RATE;

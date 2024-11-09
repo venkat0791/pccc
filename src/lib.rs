@@ -83,14 +83,13 @@ use std::io;
 
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 pub mod lte;
 mod rsc;
 pub mod utils;
 
 /// Custom error type
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     /// Invalid input error
     #[error("{0}")]
@@ -194,7 +193,7 @@ impl Interleaver {
     pub fn new(perm: &[usize]) -> Result<Self, Error> {
         if perm.is_empty() {
             return Err(Error::InvalidInput(
-                "Permutation cannot be empty".to_string(),
+                "Permutation defining interleaver cannot be empty".to_string(),
             ));
         }
         let perm_vec = perm.to_vec();
@@ -202,8 +201,9 @@ impl Interleaver {
         perm_vec_sorted.sort_unstable();
         if !perm_vec_sorted.into_iter().eq(0 .. perm_vec.len()) {
             return Err(Error::InvalidInput(format!(
-                "Expected permutation of all integers in the range [0, {})",
-                perm_vec.len()
+                "Expected permutation of all integers in the range [0, {}), found {:?}",
+                perm_vec.len(),
+                perm_vec
             )));
         }
         Ok(Self::from_valid_perm(perm_vec))
@@ -234,7 +234,7 @@ impl Interleaver {
     pub fn random(length: usize, rng: &mut ThreadRng) -> Result<Self, Error> {
         if length == 0 {
             return Err(Error::InvalidInput(
-                "Length must be a positive integer".to_string(),
+                "Length of interleaver must be a positive integer".to_string(),
             ));
         }
         let mut perm_vec: Vec<usize> = (0 .. length).collect();
@@ -270,9 +270,9 @@ impl Interleaver {
     pub fn interleave<T: Copy>(&self, input: &[T], output: &mut Vec<T>) -> Result<(), Error> {
         if input.len() != self.length {
             return Err(Error::InvalidInput(format!(
-                "Interleaver input has length {} (expected {})",
-                input.len(),
+                "Invalid interleaver input length (expected {}, found {})",
                 self.length,
+                input.len()
             )));
         }
         output.clear();
@@ -310,9 +310,9 @@ impl Interleaver {
     pub fn deinterleave<T: Copy>(&self, output: &[T], input: &mut Vec<T>) -> Result<(), Error> {
         if output.len() != self.length {
             return Err(Error::InvalidInput(format!(
-                "Interleaver output has length {} (expected {})",
-                output.len(),
+                "Invalid interleaver output length (expected {}, found {})",
                 self.length,
+                output.len()
             )));
         }
         input.clear();
@@ -518,7 +518,7 @@ fn check_decoder_inputs(
             "For interleaver of length {}, expected {} code bit LLR values (found {})",
             num_info_bits,
             expected_code_bits_llr_len,
-            code_bits_llr.len(),
+            code_bits_llr.len()
         )))
     }
 }

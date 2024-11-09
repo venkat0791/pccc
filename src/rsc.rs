@@ -377,15 +377,16 @@ impl DecoderWorkspace {
 /// Returns constraint length corresponding to given code polynomials.
 fn constraint_length(code_polynomials: &[usize]) -> Result<usize, Error> {
     if code_polynomials.len() < 2 {
-        return Err(Error::InvalidInput(
-            "Expected at least two code polynomials".to_string(),
-        ));
+        return Err(Error::InvalidInput(format!(
+            "Expected at least two code polynomials (found {})",
+            code_polynomials.len()
+        )));
     }
     let feedback_poly = code_polynomials[0];
     if feedback_poly == 0 || feedback_poly & (feedback_poly - 1) == 0 {
-        return Err(Error::InvalidInput(
-            "Feedback polynomial cannot be 0 or a power of 2".to_string(),
-        ));
+        return Err(Error::InvalidInput(format!(
+            "Feedback polynomial cannot be 0 or a power of 2 (found 0o{feedback_poly:o})"
+        )));
     }
     // OK to cast `u32` to `usize`: Numbers involved will always be small enough.
     let constraint_len = (usize::BITS - feedback_poly.leading_zeros()) as usize;
@@ -395,9 +396,9 @@ fn constraint_length(code_polynomials: &[usize]) -> Result<usize, Error> {
         .any(|&x| x == 0 || x == feedback_poly || x >= two_pow_constraint_len)
     {
         return Err(Error::InvalidInput(format!(
-            "For constraint length of {constraint_len}, each feedforward polynomial \
-            must be in the range [1, {two_pow_constraint_len}), and cannot equal the \
-            feedback polynomial {feedback_poly}",
+            "For feedback polynomial of 0o{feedback_poly:o}, each feedforward polynomial \
+            must be in the range [0o1, 0o{two_pow_constraint_len:o}), and cannot equal \
+            0o{feedback_poly:o}"
         )));
     }
     Ok(constraint_len)
@@ -489,7 +490,8 @@ pub(crate) fn decode(
         (info_bits_llr_prior.len() + state_machine.memory_len) * state_machine.num_output_bits;
     if code_bits_llr.len() != expected_code_bits_llr_len {
         return Err(Error::InvalidInput(format!(
-            "Wrong number of code bit LLR values (expected {expected_code_bits_llr_len})",
+            "Wrong number of code bit LLR values (expected {expected_code_bits_llr_len}, found {})",
+            code_bits_llr.len()
         )));
     }
     run_bcjr_backward_pass(code_bits_llr, info_bits_llr_prior, state_machine, workspace);
