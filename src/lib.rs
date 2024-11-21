@@ -23,10 +23,9 @@
 //! use pccc::{decoder, encoder, Bit, DecodingAlgo, Interleaver};
 //! use Bit::{One, Zero};
 //!
-//! // Rate-1/3 PCCC in LTE, 4 information bits, Log-MAP decoding (8 turbo iterations)
-//! let code_polynomials = [0o13, 0o15];
-//! let interleaver = Interleaver::new(&[3, 0, 1, 2])?;
-//! let decoding_algo = DecodingAlgo::LogMAP(8);
+//! let code_polynomials = [0o13, 0o15]; // Rate-1/3 PCCC in LTE
+//! let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // Interleaver for 4 information bits
+//! let decoding_algo = DecodingAlgo::LogMAP(8); // Log-MAP decoding, 8 turbo iterations
 //!
 //! // Encoding
 //! let info_bits = [One, Zero, Zero, One];
@@ -149,7 +148,7 @@ impl fmt::Display for DecodingAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} decoding, {} iterations",
+            "{} decoding, {} turbo iterations",
             self.name(),
             self.num_iter()
         )
@@ -371,7 +370,7 @@ impl Interleaver {
 /// use Bit::{One, Zero};
 ///
 /// let code_polynomials = [0o13, 0o15]; // Rate-1/3 PCCC in LTE
-/// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // 4 information bits
+/// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // Interleaver for 4 information bits
 /// let info_bits = [One, Zero, Zero, One];
 /// let code_bits = encoder(&info_bits, &interleaver, &code_polynomials)?;
 /// assert_eq!(
@@ -454,7 +453,7 @@ pub fn encoder(
 /// use Bit::{One, Zero};
 ///
 /// let code_polynomials = [0o13, 0o15]; // Rate-1/3 PCCC in LTE
-/// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // 4 information bits
+/// let interleaver = Interleaver::new(&[3, 0, 1, 2])?; // Interleaver for 4 information bits
 /// let decoding_algo = DecodingAlgo::LogMAP(8); // Log-MAP decoding, 8 turbo iterations
 /// let code_bits_llr = [
 ///     -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
