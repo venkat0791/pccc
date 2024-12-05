@@ -383,7 +383,7 @@ fn constraint_length(code_polynomials: &[usize]) -> Result<usize, Error> {
         )));
     }
     let feedback_poly = code_polynomials[0];
-    if feedback_poly == 0 || feedback_poly & (feedback_poly - 1) == 0 {
+    if feedback_poly == 0 || feedback_poly.is_power_of_two() {
         return Err(Error::InvalidInput(format!(
             "Feedback polynomial cannot be 0 or a power of 2 (found 0o{feedback_poly:o})"
         )));
