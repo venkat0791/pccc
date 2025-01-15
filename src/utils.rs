@@ -38,7 +38,7 @@ use rand_distr::StandardNormal;
 pub fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
     (0 .. num_bits)
         .map(|_| {
-            if rng.gen_bool(0.5) {
+            if rng.random_bool(0.5) {
                 Bit::One
             } else {
                 Bit::Zero
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     #[allow(clippy::cast_possible_truncation)]
     fn test_random_bits() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let num_bits = 0;
         assert!(random_bits(num_bits, &mut rng).is_empty());
         let num_bits = 10000;
@@ -134,7 +134,7 @@ mod tests {
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]
     fn test_bpsk_awgn_channel() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         assert!(bpsk_awgn_channel(&random_bits(0, &mut rng), 0.0, &mut rng).is_empty());
         let es_over_n0_db = 20f64;
         let num_bits = 10000;

@@ -948,14 +948,14 @@ mod tests_of_functions {
 
     #[test]
     fn test_encoder() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let info_bits = utils::random_bits(40, &mut rng);
         assert!(encoder(&info_bits).is_ok());
     }
 
     #[test]
     fn test_decoder() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let code_bits_llr =
             utils::bpsk_awgn_channel(&utils::random_bits(132, &mut rng), 10.0, &mut rng);
         assert!(decoder(&code_bits_llr, DecodingAlgo::LinearLogMAP(8)).is_ok());
@@ -963,7 +963,7 @@ mod tests_of_functions {
 
     #[test]
     fn test_bpsk_awgn_sim() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         // Invalid input
         let params = SimParams {
             num_info_bits_per_block: 32,
@@ -991,7 +991,7 @@ mod tests_of_functions {
     #[test]
     #[ignore]
     fn test_run_bpsk_awgn_sims() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let all_params = vec![
             SimParams {
                 num_info_bits_per_block: 32,

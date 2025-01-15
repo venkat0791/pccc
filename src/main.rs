@@ -30,7 +30,7 @@ use std::time::Instant;
 /// Main function
 fn main() -> Result<()> {
     let timer = Instant::now();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let matches = command_line_parser().get_matches();
     let json_filename = &json_filename_from_matches(&matches);
     lte::run_bpsk_awgn_sims(&all_sim_params(&matches), &mut rng, json_filename)?;

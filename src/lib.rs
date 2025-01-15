@@ -580,7 +580,7 @@ mod tests_of_interleaver {
 
     #[test]
     fn test_random() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         // Invalid input
         assert!(Interleaver::random(0, &mut rng).is_err());
         // Valid input
