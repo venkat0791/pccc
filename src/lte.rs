@@ -61,13 +61,7 @@ pub struct SimParams {
 
 impl SimParams {
     /// Checks validity of simulation parameters.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `self.num_info_bits_per_block` is not one of the values specified in
-    /// Table 5.1.3-3 of 3GPP TS 36.212, if `self.num_blocks_per_run` is `0`, or if
-    /// `self.num_runs_min` exceeds `self.num_runs_max`.
-    pub fn check(&self) -> Result<(), Error> {
+    fn check(&self) -> Result<(), Error> {
         if qpp_coefficients(self.num_info_bits_per_block as usize).is_err() {
             return Err(Error::InvalidInput(format!(
                 "{} is not a valid number of information bits per block",
@@ -89,7 +83,6 @@ impl SimParams {
     }
 
     /// Prints simulation parameters.
-    #[allow(dead_code)]
     fn print(&self) {
         eprintln!();
         self.print_num_info_bits_per_block();
@@ -393,6 +386,12 @@ pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn run_bpsk_awgn_sims(all_params: &[SimParams], json_filename: &str) -> Result<(), Error> {
+    for params in all_params {
+        if params.check().is_err() {
+            params.print();
+            eprintln!("WARNING: Ignoring above simulation parameters as they are invalid");
+        }
+    }
     let all_results: Vec<SimResults> = all_params
         .par_iter()
         .filter_map(|params| bpsk_awgn_sim(params).ok())
@@ -983,7 +982,6 @@ mod tests_of_functions {
     }
 
     #[test]
-    #[ignore]
     fn test_run_bpsk_awgn_sims() {
         let all_params = vec![
             SimParams {
