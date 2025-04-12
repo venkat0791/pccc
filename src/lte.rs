@@ -61,7 +61,13 @@ pub struct SimParams {
 
 impl SimParams {
     /// Checks validity of simulation parameters.
-    fn check(&self) -> Result<(), Error> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `self.num_info_bits_per_block` is not one of the values specified in
+    /// Table 5.1.3-3 of 3GPP TS 36.212, if `self.num_blocks_per_run` is `0`, or if
+    /// `self.num_runs_min` exceeds `self.num_runs_max`.
+    pub fn check(&self) -> Result<(), Error> {
         if qpp_coefficients(self.num_info_bits_per_block as usize).is_err() {
             return Err(Error::InvalidInput(format!(
                 "{} is not a valid number of information bits per block",
@@ -83,6 +89,7 @@ impl SimParams {
     }
 
     /// Prints simulation parameters.
+    #[allow(dead_code)]
     fn print(&self) {
         eprintln!();
         self.print_num_info_bits_per_block();
@@ -182,6 +189,7 @@ impl SimResults {
     }
 
     /// Prints progress message.
+    #[allow(dead_code)]
     fn print_progress_message(&self) {
         if self.run_complete() {
             eprint!(
