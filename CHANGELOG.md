@@ -1,8 +1,8 @@
 # Changelog
 
-## pccc 0.3.0 (2025-04-12)
+## pccc 0.3.0 (2025-04-13)
 
-[fdd6639...HEAD](https://github.com/venkat0791/pccc/compare/fdd6639...HEAD)
+[fdd6639...72c6185](https://github.com/venkat0791/pccc/compare/fdd6639...72c6185)
 
 ### Added since 0.2.0
 
@@ -23,7 +23,7 @@
 ### Internal changes since 0.2.0
 
 - Updated all dependencies to their respective latest versions (code changes were caused only by the updates to the `rand` and `rand_distr` crates). Now all dependency versions are specified as x.y.z (some were just x.y earlier).
-- Added the `rayon` crate as a dependency, and used it to parallelize `lte::bpsk_awgn_sim` and `lte::run_bpsk_awgn_sims`, leading to a very significant speed-up of those two functions.
+- Added the `rayon` crate as a dependency, and used it to parallelize `lte::bpsk_awgn_sim` and `lte::run_bpsk_awgn_sims`, leading to a very significant speed-up of those two functions (e.g., the simulation described in the README now runs in 15% of the time compared to version 0.2.0).
 
 ## pccc 0.2.0 (2024-11-06)
 
