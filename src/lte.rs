@@ -362,14 +362,16 @@ pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
 ///
 /// # Parameters
 ///
-/// - `all_params`: Parameters for each simulation scenario of interest.
+/// - `all_params`: Parameters for each simulation scenario of interest. Any simulation scenario
+///   with invalid parameters is simply ignored (with a warning message).
 ///
-/// - `json_filename`: Name of the JSON file to which all simulation results must be written.
+/// - `json_filename`: Name of the JSON file to which the results for all simulation scenarios
+///   with valid parameters must be written.
 ///
 /// # Errors
 ///
-/// Returns an error if any invalid simulation parameters are encountered, or if there is an error
-/// in creating or writing to the JSON file for the simulation results.
+/// Returns an error if there is a failure in creating or writing to the JSON file for the
+/// simulation results.
 ///
 /// # Examples
 ///
