@@ -14,20 +14,19 @@
 //! ```
 //! use pccc::{lte, utils, DecodingAlgo};
 //!
-//! let mut rng = rand::thread_rng();
 //! let num_info_bits = 40;
 //! let es_over_n0_db = -3.0;
 //! let decoding_algo = DecodingAlgo::LogMAP(8);
 //!
-//! let info_bits = utils::random_bits(num_info_bits, &mut rng);
+//! let info_bits = utils::random_bits(num_info_bits);
 //! let code_bits = lte::encoder(&info_bits)?;
-//! let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, es_over_n0_db, &mut rng);
+//! let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, es_over_n0_db);
 //! let info_bits_hat = lte::decoder(&code_bits_llr, decoding_algo)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 use itertools::Itertools;
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fs::File;
@@ -335,17 +334,26 @@ pub fn decoder(code_bits_llr: &[f64], decoding_algo: DecodingAlgo) -> Result<Vec
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::missing_panics_doc)]
 pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
     params.check()?;
-    let mut rng = rand::rng();
     let mut results = SimResults::new(params);
     while !results.sim_complete() {
-        let info_bits = utils::random_bits(params.num_info_bits_per_block as usize, &mut rng);
-        let code_bits = encoder(&info_bits)?;
-        let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, params.es_over_n0_db, &mut rng);
-        let info_bits_hat = decoder(&code_bits_llr, params.decoding_algo)?;
-        let num_info_bit_errors_this_block = utils::error_count(&info_bits_hat, &info_bits);
-        results.update_after_block(num_info_bit_errors_this_block as u32);
+        let all_num_info_bit_errors_this_run: Vec<usize> = (0 .. params.num_blocks_per_run)
+            .into_par_iter()
+            .map(|_| {
+                let info_bits = utils::random_bits(params.num_info_bits_per_block as usize);
+                let code_bits = encoder(&info_bits).unwrap();
+                let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, params.es_over_n0_db);
+                let info_bits_hat = decoder(&code_bits_llr, params.decoding_algo).unwrap();
+                utils::error_count(&info_bits_hat, &info_bits)
+            })
+            .collect();
+        // OK to unwrap: Since the simulation parameters have already been checked, an `Err` will
+        // not be returned by the `encoder` and `decoder` functions.
+        for num_info_bit_errors_this_block in all_num_info_bit_errors_this_run {
+            results.update_after_block(num_info_bit_errors_this_block as u32);
+        }
     }
     Ok(results)
 }
@@ -355,8 +363,6 @@ pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
 /// # Parameters
 ///
 /// - `all_params`: Parameters for each simulation scenario of interest.
-///
-/// -  `rng`: Random number generator for the simulations.
 ///
 /// - `json_filename`: Name of the JSON file to which all simulation results must be written.
 ///
@@ -942,16 +948,13 @@ mod tests_of_functions {
 
     #[test]
     fn test_encoder() {
-        let mut rng = rand::rng();
-        let info_bits = utils::random_bits(40, &mut rng);
+        let info_bits = utils::random_bits(40);
         assert!(encoder(&info_bits).is_ok());
     }
 
     #[test]
     fn test_decoder() {
-        let mut rng = rand::rng();
-        let code_bits_llr =
-            utils::bpsk_awgn_channel(&utils::random_bits(132, &mut rng), 10.0, &mut rng);
+        let code_bits_llr = utils::bpsk_awgn_channel(&utils::random_bits(132), 10.0);
         assert!(decoder(&code_bits_llr, DecodingAlgo::LinearLogMAP(8)).is_ok());
     }
 

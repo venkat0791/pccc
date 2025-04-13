@@ -80,7 +80,7 @@
 use std::fmt;
 use std::io;
 
-use rand::{rngs::ThreadRng, seq::SliceRandom};
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 pub mod lte;
@@ -214,8 +214,6 @@ impl Interleaver {
     ///
     /// - `length`: Length of input/output sequence.
     ///
-    /// - `rng`: Random number generator to be used.
-    ///
     /// # Errors
     ///
     /// Returns an error if `length` is `0`.
@@ -225,19 +223,18 @@ impl Interleaver {
     /// ```
     /// use pccc::Interleaver;
     ///
-    /// let mut rng = rand::thread_rng();
     /// let length = 8;
-    /// let interleaver = Interleaver::random(length, &mut rng)?;
+    /// let interleaver = Interleaver::random(length)?;
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn random(length: usize, rng: &mut ThreadRng) -> Result<Self, Error> {
+    pub fn random(length: usize) -> Result<Self, Error> {
         if length == 0 {
             return Err(Error::InvalidInput(
                 "Length of interleaver must be a positive integer".to_string(),
             ));
         }
         let mut perm_vec: Vec<usize> = (0 .. length).collect();
-        perm_vec.shuffle(rng);
+        perm_vec.shuffle(&mut rand::rng());
         Ok(Self::from_valid_perm(perm_vec))
     }
 
@@ -580,12 +577,11 @@ mod tests_of_interleaver {
 
     #[test]
     fn test_random() {
-        let mut rng = rand::rng();
         // Invalid input
-        assert!(Interleaver::random(0, &mut rng).is_err());
+        assert!(Interleaver::random(0).is_err());
         // Valid input
         let length = 8;
-        let interleaver = Interleaver::random(length, &mut rng).unwrap();
+        let interleaver = Interleaver::random(length).unwrap();
         let mut o2i = interleaver.all_in_index_given_out_index;
         o2i.sort_unstable();
         assert!(o2i == (0 .. length).collect::<Vec<usize>>());

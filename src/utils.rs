@@ -11,17 +11,16 @@
 //! ```
 //! use pccc::utils;
 //!
-//! let mut rng = rand::thread_rng();
 //! let num_bits = 40;
 //! let es_over_n0_db = 10.0;
-//! let bits = utils::random_bits(num_bits, &mut rng);
-//! let bits_llr = utils::bpsk_awgn_channel(&bits, es_over_n0_db, &mut rng);
+//! let bits = utils::random_bits(num_bits);
+//! let bits_llr = utils::bpsk_awgn_channel(&bits, es_over_n0_db);
 //! let bits_hat = utils::bpsk_slicer(&bits_llr);
 //! let err_count = utils::error_count(&bits_hat, &bits);
 //! ```
 
 use crate::Bit;
-use rand::{prelude::ThreadRng, Rng};
+use rand::Rng;
 use rand_distr::StandardNormal;
 
 /// Returns given number of random bits.
@@ -30,12 +29,12 @@ use rand_distr::StandardNormal;
 ///
 /// - `num_bits`: Number of random bits to be generated.
 ///
-/// - `rng`: Random number generator to be used.
-///
 /// # Returns
 ///
 /// - `bits`: Random bits.
-pub fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
+#[must_use]
+pub fn random_bits(num_bits: usize) -> Vec<Bit> {
+    let mut rng = rand::rng();
     (0 .. num_bits)
         .map(|_| {
             if rng.random_bool(0.5) {
@@ -63,7 +62,9 @@ pub fn random_bits(num_bits: usize, rng: &mut ThreadRng) -> Vec<Bit> {
 ///
 /// - `bits_llr`: Log-likelihood-ratio (LLR) values at the BPSK-AWGN channel output corresponding
 ///   to the transmitted bits, with positive values indicating that `Zero` is more likely.
-pub fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64, rng: &mut ThreadRng) -> Vec<f64> {
+#[must_use]
+pub fn bpsk_awgn_channel(bits: &[Bit], es_over_n0_db: f64) -> Vec<f64> {
+    let mut rng = rand::rng();
     let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
     let noise_var = 0.5 / es_over_n0;
     bits.iter()
@@ -120,11 +121,10 @@ mod tests {
     #[test]
     #[allow(clippy::cast_possible_truncation)]
     fn test_random_bits() {
-        let mut rng = rand::rng();
         let num_bits = 0;
-        assert!(random_bits(num_bits, &mut rng).is_empty());
+        assert!(random_bits(num_bits).is_empty());
         let num_bits = 10000;
-        let bits = random_bits(num_bits, &mut rng);
+        let bits = random_bits(num_bits);
         let num_zeros = bits.iter().filter(|&b| *b == Zero).count();
         let num_ones = bits.iter().filter(|&b| *b == One).count();
         assert!(num_zeros > 9 * num_bits / 20 && num_ones > 9 * num_bits / 20);
@@ -134,12 +134,11 @@ mod tests {
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]
     fn test_bpsk_awgn_channel() {
-        let mut rng = rand::rng();
-        assert!(bpsk_awgn_channel(&random_bits(0, &mut rng), 0.0, &mut rng).is_empty());
+        assert!(bpsk_awgn_channel(&random_bits(0), 0.0).is_empty());
         let es_over_n0_db = 20f64;
         let num_bits = 10000;
-        let bits = random_bits(num_bits, &mut rng);
-        let bits_llr = bpsk_awgn_channel(&bits, es_over_n0_db, &mut rng);
+        let bits = random_bits(num_bits);
+        let bits_llr = bpsk_awgn_channel(&bits, es_over_n0_db);
         let es_over_n0 = 10f64.powf(0.1 * es_over_n0_db);
         let noise_var_est = bits_llr
             .iter()
