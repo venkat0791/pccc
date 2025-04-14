@@ -149,7 +149,7 @@ mod tests {
             })
             .map(|x| x * x)
             .sum::<f64>()
-            / f64::from(num_bits as u32);
+            / f64::from(u32::try_from(num_bits).unwrap());
         assert!(noise_var_est > 7.2 * es_over_n0 && noise_var_est < 8.8 * es_over_n0);
     }
 

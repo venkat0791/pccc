@@ -388,8 +388,8 @@ fn constraint_length(code_polynomials: &[usize]) -> Result<usize, Error> {
             "Feedback polynomial cannot be 0 or a power of 2 (found 0o{feedback_poly:o})"
         )));
     }
-    // OK to cast `u32` to `usize`: Numbers involved will always be small enough.
-    let constraint_len = (usize::BITS - feedback_poly.leading_zeros()) as usize;
+    // OK to unwrap: Numbers involved will be small enough.
+    let constraint_len = usize::try_from(usize::BITS - feedback_poly.leading_zeros()).unwrap();
     let two_pow_constraint_len = 1 << constraint_len;
     if code_polynomials[1 ..]
         .iter()

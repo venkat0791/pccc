@@ -61,7 +61,9 @@ pub struct SimParams {
 impl SimParams {
     /// Checks validity of simulation parameters.
     fn check(&self) -> Result<(), Error> {
-        if qpp_coefficients(self.num_info_bits_per_block as usize).is_err() {
+        // OK to unwrap: It is assumed that the casting of `self.num_info_bits_per_block` will not
+        // cause a panic because the numbers involved will be small enough.
+        if qpp_coefficients(usize::try_from(self.num_info_bits_per_block).unwrap()).is_err() {
             return Err(Error::InvalidInput(format!(
                 "{} is not a valid number of information bits per block",
                 self.num_info_bits_per_block
@@ -342,18 +344,21 @@ pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
         let all_num_info_bit_errors_this_run: Vec<usize> = (0 .. params.num_blocks_per_run)
             .into_par_iter()
             .map(|_| {
-                let info_bits = utils::random_bits(params.num_info_bits_per_block as usize);
+                let info_bits =
+                    utils::random_bits(usize::try_from(params.num_info_bits_per_block).unwrap());
                 let code_bits = encoder(&info_bits).unwrap();
                 let code_bits_llr = utils::bpsk_awgn_channel(&code_bits, params.es_over_n0_db);
                 let info_bits_hat = decoder(&code_bits_llr, params.decoding_algo).unwrap();
                 utils::error_count(&info_bits_hat, &info_bits)
             })
             .collect();
-        // OK to unwrap: Since the simulation parameters have already been checked, an `Err` will
-        // not be returned by the `encoder` and `decoder` functions.
         for num_info_bit_errors_this_block in all_num_info_bit_errors_this_run {
-            results.update_after_block(num_info_bit_errors_this_block as u32);
+            results.update_after_block(u32::try_from(num_info_bit_errors_this_block).unwrap());
         }
+        // OK to unwrap: Since the simulation parameters have already been checked, the `encoder`
+        // and `decoder` functions will not return `Err`. Further, it is assumed that the casting
+        // of `params.num_info_bits_per_block` and `num_info_bit_errors_this_block` will not
+        // cause a panic because the numbers involved will be small enough.
     }
     Ok(results)
 }
@@ -479,6 +484,8 @@ fn all_sim_results_for_sim_case(all_results: &[SimResults], case: SimCase) -> Ve
             all_results_for_case.push(*results);
         }
     }
+    // OK to cast `f64` to `i32`: Converting with "as" will simply saturate any out-of-range values
+    // to either `i32::MAX` or `i32::MIN`.
     all_results_for_case.sort_by_key(|results| (1e6 * results.params.es_over_n0_db) as i32);
     all_results_for_case
 }

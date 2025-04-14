@@ -295,7 +295,7 @@ mod tests {
             assert_eq!(params.decoding_algo, DecodingAlgo::LogMAP(8));
             assert_float_eq!(
                 params.es_over_n0_db,
-                -4.0 + 0.2 * f64::from(idx as u32),
+                -4.0 + 0.2 * f64::from(u32::try_from(idx).unwrap()),
                 abs <= 1e-8
             );
             assert_eq!(params.num_block_errors_min, 50);
