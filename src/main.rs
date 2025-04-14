@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     let timer = Instant::now();
     let matches = command_line_parser().get_matches();
     lte::run_bpsk_awgn_sims(
-        &all_sim_params(&matches),
+        &all_sim_params_from_matches(&matches),
         &json_filename_from_matches(&matches),
     )?;
     eprintln!("Elapsed time: {:.3?}", timer.elapsed());
@@ -158,7 +158,7 @@ fn json_filename() -> Arg {
 }
 
 /// Returns simulation parameters based on command-line arguments.
-fn all_sim_params(matches: &ArgMatches) -> Vec<lte::SimParams> {
+fn all_sim_params_from_matches(matches: &ArgMatches) -> Vec<lte::SimParams> {
     let mut num_runs_min = num_runs_min_from_matches(matches);
     let mut num_runs_max = num_runs_max_from_matches(matches);
     if num_runs_min > num_runs_max {
@@ -247,6 +247,7 @@ fn json_filename_from_matches(matches: &ArgMatches) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use float_eq::assert_float_eq;
 
     fn command_line_for_test() -> Vec<&'static str> {
         vec![
@@ -284,20 +285,29 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::float_cmp)]
-    fn test_all_sim_params() {
+    #[allow(clippy::cast_possible_truncation)]
+    fn test_all_sim_params_from_matches() {
         let matches = command_line_parser().get_matches_from(command_line_for_test());
-        let all_params = all_sim_params(&matches);
-        let all_es_over_n0_db = [-4.0, -3.8, -3.6, -3.4, -3.2, -3.0];
+        let all_params = all_sim_params_from_matches(&matches);
         assert_eq!(all_params.len(), 6);
         for (idx, &params) in all_params.iter().enumerate() {
             assert_eq!(params.num_info_bits_per_block, 40);
             assert_eq!(params.decoding_algo, DecodingAlgo::LogMAP(8));
-            assert_eq!(params.es_over_n0_db, all_es_over_n0_db[idx]);
+            assert_float_eq!(
+                params.es_over_n0_db,
+                -4.0 + 0.2 * f64::from(idx as u32),
+                abs <= 1e-8
+            );
             assert_eq!(params.num_block_errors_min, 50);
             assert_eq!(params.num_blocks_per_run, 100);
             assert_eq!(params.num_runs_min, 10);
             assert_eq!(params.num_runs_max, 20);
         }
+    }
+
+    #[test]
+    fn test_json_filename_from_matches() {
+        let matches = command_line_parser().get_matches_from(command_line_for_test());
+        assert_eq!(json_filename_from_matches(&matches), "results.json");
     }
 }
