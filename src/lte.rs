@@ -414,38 +414,6 @@ pub fn run_bpsk_awgn_sims(all_params: &[SimParams], json_filename: &str) -> Resu
     Ok(())
 }
 
-/// Prints a summary of all the simulation results in a JSON file.
-///
-/// # Parameters
-///
-/// - `json_filename`: Name of the JSON file containing all the simulation results.
-///
-/// # Errors
-///
-/// Returns an error if opening or reading from the JSON file fails.
-pub fn summarize_all_sim_results_in_file(json_filename: &str) -> Result<(), Error> {
-    let all_results = all_sim_results_from_file(json_filename)?;
-    summarize_all_sim_results(&all_results);
-    Ok(())
-}
-
-/// Saves all simulation results to a JSON file.
-fn save_all_sim_results_to_file(
-    all_results: &[SimResults],
-    json_filename: &str,
-) -> Result<(), Error> {
-    let writer = BufWriter::new(File::create(json_filename)?);
-    serde_json::to_writer_pretty(writer, all_results)?;
-    Ok(())
-}
-
-/// Returns all simulation results from a JSON file.
-fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
-    let reader = BufReader::new(File::open(json_filename)?);
-    let all_results = serde_json::from_reader(reader)?;
-    Ok(all_results)
-}
-
 /// Prints summary of all simulation results.
 fn summarize_all_sim_results(all_results: &[SimResults]) {
     let mut all_cases: Vec<SimCase> = all_results.iter().map(SimCase::from).unique().collect();
@@ -475,6 +443,16 @@ fn summarize_all_sim_results(all_results: &[SimResults]) {
     }
 }
 
+/// Saves all simulation results to a JSON file.
+fn save_all_sim_results_to_file(
+    all_results: &[SimResults],
+    json_filename: &str,
+) -> Result<(), Error> {
+    let writer = BufWriter::new(File::create(json_filename)?);
+    serde_json::to_writer_pretty(writer, all_results)?;
+    Ok(())
+}
+
 /// Returns all simulation results for a given simulation case.
 #[allow(clippy::cast_possible_truncation)]
 fn all_sim_results_for_sim_case(all_results: &[SimResults], case: SimCase) -> Vec<SimResults> {
@@ -488,6 +466,14 @@ fn all_sim_results_for_sim_case(all_results: &[SimResults], case: SimCase) -> Ve
     // to either `i32::MAX` or `i32::MIN`.
     all_results_for_case.sort_by_key(|results| (1e6 * results.params.es_over_n0_db) as i32);
     all_results_for_case
+}
+
+/// Returns all simulation results from a JSON file.
+#[allow(dead_code)]
+fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
+    let reader = BufReader::new(File::open(json_filename)?);
+    let all_results = serde_json::from_reader(reader)?;
+    Ok(all_results)
 }
 
 /// Returns quadratic permutation polynomial (QPP) interleaver for rate-1/3 LTE PCCC.
