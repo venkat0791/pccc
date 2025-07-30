@@ -370,7 +370,7 @@ impl DecoderWorkspace {
                     self.alpha_calc.decoding_algo,
                 );
             }
-        };
+        }
     }
 }
 
