@@ -8,12 +8,12 @@ The package comprises a library crate and a binary crate. Refer to the [API docu
 
 The included binary crate can be used to run a Monte Carlo simulation that evaluates the error rate performance over a BPSK-AWGN channel of the rate-1/3 PCCC used in LTE. The parameters for such a simulation are specified on the command line, and the results from it are saved to a JSON file.
 
-Build the command-line executable in release mode with `cargo build --release` and then run `cargo run --release -- -h` for help on the command-line interface:
+Execute `cargo run -- -h` for help on the command-line interface.
 
 ```console
-$ cargo run --release -- -h
-    Finished `release` profile [optimized + debuginfo] target(s) in 0.04s
-     Running `target/release/pccc -h`
+$ cargo run -- -h
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target/debug/pccc -h`
 Evaluates the performance of the rate-1/3 LTE PCCC over a BPSK-AWGN channel
 
 Usage: pccc [OPTIONS]
@@ -34,9 +34,7 @@ Options:
   -V, --version                     Print version
 ```
 
-## Example
-
-The following command runs a simulation to evaluate the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 1536 bits, with Log-MAP decoding and 8 turbo iterations. The signal-to-noise ratio (Es/N0) ranges from -5 dB to -4 dB in 0.1 dB steps. Results are saved to a file named results1536.json (some parameters are left at their default values).
+Execute `cargo run --release -- [OPTIONS]` to run a simulation (in release mode) with desired parameters. For example, the following command evaluates the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 1536 bits, with Log-MAP decoding and 8 turbo iterations. The signal-to-noise ratio (Es/N0) ranges from -5 dB to -4 dB in 0.1 dB steps. Results are saved to a file named _results1536.json_. (Some parameters are left at their default values.)
 
 ```console
 cargo run --release -- -i 1536 -a LogMAP -t 8 -r -5.0 -p 0.1 -s 11 -f results1536.json
