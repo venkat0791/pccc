@@ -21,7 +21,6 @@
     unused_qualifications
 )]
 
-use anyhow::Result;
 use clap::{
     crate_name, crate_version, parser::ValueSource, value_parser, Arg, ArgMatches, Command,
 };
@@ -29,7 +28,7 @@ use clap::{
 use pccc::{lte, DecodingAlgo};
 
 /// Main function
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     let timer = std::time::Instant::now();
     let matches = command_line_parser().get_matches();
     lte::run_bpsk_awgn_sims(
