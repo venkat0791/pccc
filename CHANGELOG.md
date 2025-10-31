@@ -1,5 +1,30 @@
 # Changelog
 
+## pccc 0.4.0 (2025-10-31)
+
+[72c6185...HEAD](https://github.com/venkat0791/pccc/compare/72c6185...HEAD)
+
+### Added since 0.3.0
+
+### Changed since 0.3.0
+
+- Removed the lte::summarize_all_sim_results_in_file function (which was in the public interface), since it seemed unsound.
+
+### Fixed since 0.3.0
+
+### Documentation changes since 0.3.0
+
+- Corrected the "Errors" section of the docstring of lte::run_bpsk_awgn_sims.
+- Improved the README.
+
+### Internal changes since 0.3.0
+
+- Moved all code out of lib.rs and into some new private modules (common, pccc, and interleaver).
+- In main.rs, renamed a helper function and added/improved tests.
+- Replaced "x as y" with try_from where possible.
+- Reordered all `use` statements consistently, putting std/core ones first, then those from dependencies, and finally those from within the crate.
+- Updated all dependencies to their respective latest versions (no code changes were required as a result).
+
 ## pccc 0.3.0 (2025-04-13)
 
 [fdd6639...72c6185](https://github.com/venkat0791/pccc/compare/fdd6639...72c6185)
