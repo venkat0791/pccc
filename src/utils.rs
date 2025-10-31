@@ -19,9 +19,10 @@
 //! let err_count = utils::error_count(&bits_hat, &bits);
 //! ```
 
-use crate::Bit;
 use rand::Rng;
 use rand_distr::StandardNormal;
+
+use crate::Bit;
 
 /// Returns given number of random bits.
 ///

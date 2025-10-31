@@ -28,10 +28,6 @@
 use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
-use std::io::BufWriter;
 
 use crate::{utils, Bit, DecodingAlgo, Error, Interleaver};
 
@@ -230,8 +226,8 @@ struct SimCase {
     decoding_algo: DecodingAlgo,
 }
 
-impl fmt::Display for SimCase {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for SimCase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{} bits/block, {}",
@@ -448,7 +444,7 @@ fn save_all_sim_results_to_file(
     all_results: &[SimResults],
     json_filename: &str,
 ) -> Result<(), Error> {
-    let writer = BufWriter::new(File::create(json_filename)?);
+    let writer = std::io::BufWriter::new(std::fs::File::create(json_filename)?);
     serde_json::to_writer_pretty(writer, all_results)?;
     Ok(())
 }
@@ -471,7 +467,7 @@ fn all_sim_results_for_sim_case(all_results: &[SimResults], case: SimCase) -> Ve
 /// Returns all simulation results from a JSON file.
 #[allow(dead_code)]
 fn all_sim_results_from_file(json_filename: &str) -> Result<Vec<SimResults>, Error> {
-    let reader = BufReader::new(File::open(json_filename)?);
+    let reader = std::io::BufReader::new(std::fs::File::open(json_filename)?);
     let all_results = serde_json::from_reader(reader)?;
     Ok(all_results)
 }
@@ -827,8 +823,9 @@ mod tests_of_simparams {
 
 #[cfg(test)]
 mod tests_of_simresults {
-    use super::*;
     use float_eq::assert_float_eq;
+
+    use super::*;
 
     fn params_for_test() -> SimParams {
         SimParams {

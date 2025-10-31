@@ -864,8 +864,9 @@ mod tests_of_state_machine {
 
 #[cfg(test)]
 mod tests_of_functions {
-    use super::*;
     use float_eq::assert_float_eq;
+
+    use super::*;
     use Bit::{One, Zero};
 
     #[test]

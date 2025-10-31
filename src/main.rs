@@ -22,14 +22,15 @@
 )]
 
 use anyhow::Result;
-use clap::parser::ValueSource;
-use clap::{crate_name, crate_version, value_parser, Arg, ArgMatches, Command};
+use clap::{
+    crate_name, crate_version, parser::ValueSource, value_parser, Arg, ArgMatches, Command,
+};
+
 use pccc::{lte, DecodingAlgo};
-use std::time::Instant;
 
 /// Main function
 fn main() -> Result<()> {
-    let timer = Instant::now();
+    let timer = std::time::Instant::now();
     let matches = command_line_parser().get_matches();
     lte::run_bpsk_awgn_sims(
         &all_sim_params_from_matches(&matches),
@@ -246,8 +247,9 @@ fn json_filename_from_matches(matches: &ArgMatches) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use float_eq::assert_float_eq;
+
+    use super::*;
 
     fn command_line_for_test() -> Vec<&'static str> {
         vec![
