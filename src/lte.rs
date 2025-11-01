@@ -828,6 +828,20 @@ mod tests_of_simparams {
         };
         params.print();
     }
+
+    #[test]
+    fn test_print_concise() {
+        let params = SimParams {
+            num_info_bits_per_block: 40,
+            decoding_algo: DecodingAlgo::LinearLogMAP(8),
+            es_over_n0_db: -3.0,
+            num_block_errors_min: 100,
+            num_blocks_per_run: 1000,
+            num_runs_min: 1,
+            num_runs_max: 10,
+        };
+        params.print_concise();
+    }
 }
 
 #[cfg(test)]
