@@ -2,7 +2,7 @@
 
 ## pccc 0.4.0 (2025-10-31)
 
-[72c6185...HEAD](https://github.com/venkat0791/pccc/compare/72c6185...HEAD)
+[72c6185...9251b93](https://github.com/venkat0791/pccc/compare/72c6185...9251b93)
 
 ### Added since 0.3.0
 
