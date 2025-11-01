@@ -179,7 +179,6 @@ impl SimResults {
     }
 
     /// Prints progress message.
-    #[allow(dead_code)]
     fn print_progress_message(&self) {
         if self.run_complete() {
             eprint!(
@@ -356,6 +355,8 @@ pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
         // of `params.num_info_bits_per_block` and `num_info_bit_errors_this_block` will not
         // cause a panic because the numbers involved will be small enough.
     }
+    params.print();
+    results.print_progress_message();
     Ok(results)
 }
 
