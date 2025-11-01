@@ -91,6 +91,14 @@ impl SimParams {
         self.print_num_runs_max();
     }
 
+    /// Prints concise version of simulation parameters.
+    fn print_concise(&self) {
+        eprintln!();
+        self.print_num_info_bits_per_block();
+        self.print_decoding_algo();
+        self.print_es_over_n0_db();
+    }
+
     /// Prints information block size.
     fn print_num_info_bits_per_block(&self) {
         eprintln!(
@@ -106,7 +114,7 @@ impl SimParams {
 
     /// Prints Es/N0 (dB) value.
     fn print_es_over_n0_db(&self) {
-        eprintln!("Es/N0 of {} dB", self.es_over_n0_db);
+        eprintln!("Es/N0 of {:.2} dB", self.es_over_n0_db);
     }
 
     /// Prints desired minimum number of block errors.
@@ -355,7 +363,7 @@ pub fn bpsk_awgn_sim(params: &SimParams) -> Result<SimResults, Error> {
         // of `params.num_info_bits_per_block` and `num_info_bit_errors_this_block` will not
         // cause a panic because the numbers involved will be small enough.
     }
-    params.print();
+    params.print_concise();
     results.print_progress_message();
     Ok(results)
 }
