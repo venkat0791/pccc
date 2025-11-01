@@ -118,7 +118,7 @@ fn num_block_errors_min() -> Arg {
     Arg::new("num_block_errors_min")
         .short('e')
         .value_parser(value_parser!(u32))
-        .default_value("500")
+        .default_value("1000")
         .help("Desired minimum number of block errors")
 }
 
@@ -145,7 +145,7 @@ fn num_runs_max() -> Arg {
     Arg::new("num_runs_max")
         .short('x')
         .value_parser(value_parser!(u32))
-        .default_value("100")
+        .default_value("1000")
         .help("Maximum number of runs of blocks to be simulated")
 }
 
