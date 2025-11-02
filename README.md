@@ -37,7 +37,7 @@ Options:
   -V, --version                     Print version
 ```
 
-Execute `cargo run --release -- [OPTIONS]` to run a simulation (in release mode) with desired parameters. For example, the following command evaluates the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 6144 bits, with Log-MAP decoding and 8 turbo iterations, and the signal-to-noise ratio (Es/N0) ranging from -4.95 dB to -4.35 dB in 0.1 dB steps. Results are saved to a file named _results6144.json_. (Some parameters are left at their default values.)
+Execute `cargo run --release -- [OPTIONS]` to run a simulation with desired parameters. For example, the following command evaluates the bit error rate (BER) and block error rate (BLER) of the LTE PCCC for a block size of 6144 bits, with Log-MAP decoding, 8 turbo iterations, and the signal-to-noise ratio (Es/N0) ranging from -4.95 dB to -4.35 dB in 0.1 dB steps. Results are saved to a file named _results6144.json_. (Some parameters are left at their default values.)
 
 ```console
 cargo run --release -- -i 6144 -a LogMAP -t 8 -r -4.95 -p 0.1 -s 7 -f results6144.json
