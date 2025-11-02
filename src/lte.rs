@@ -26,7 +26,7 @@
 //! ```
 
 use itertools::Itertools;
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use crate::{utils, Bit, DecodingAlgo, Error, Interleaver};
@@ -411,7 +411,7 @@ pub fn run_bpsk_awgn_sims(all_params: &[SimParams], json_filename: &str) -> Resu
         }
     }
     let all_results: Vec<SimResults> = all_params
-        .par_iter()
+        .iter()
         .filter_map(|params| bpsk_awgn_sim(params).ok())
         .collect();
     summarize_all_sim_results(&all_results);
