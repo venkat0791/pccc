@@ -241,7 +241,7 @@ fn json_filename_from_matches(matches: &ArgMatches) -> String {
     matches
         .get_one::<String>("json_filename")
         .unwrap()
-        .to_string()
+        .clone()
 }
 
 #[cfg(test)]
